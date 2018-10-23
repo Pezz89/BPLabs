@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+from threading import Thread, Lock
+import logging
+import webview
+from time import sleep
+from server import run_server
+
+server_lock = Lock()
+
+logger = logging.getLogger(__name__)
+
+
+def url_ok(url, port):
+    # Use httplib on Python 2
+    try:
+        from http.client import HTTPConnection
+    except ImportError:
+        from httplib import HTTPConnection
+
+    try:
+        conn = HTTPConnection(url, port)
+        conn.request("GET", "/")
+        r = conn.getresponse()
+        return r.status == 200
+    except:
+        logger.exception("Server not started")
+        return False
+
+if __name__ == '__main__':
+    logger.debug("Starting server")
+    # Run server in seperate thread
+    t = Thread(target=run_server)
+    t.daemon = True
+    t.start()
+    logger.debug("Checking server")
+
+    # Check server is up and running
+    while not url_ok("127.0.0.1", 23948):
+        sleep(0.1)
+
+    logger.debug("Server started")
+    # Create browser window for user interaction with GUI
+    webview.create_window("BPLabs",
+                          "http://127.0.0.1:23948/home",
+                          width=1000, height=700, min_size=(1000, 500), debug=True)

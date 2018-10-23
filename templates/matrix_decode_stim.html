@@ -1,0 +1,92 @@
+{% extends 'index.html' %}
+{% block content %}
+<div class="card">
+    <div id="main-div" class="card-body">
+        <form action="{{ url_for('matDecStim') }}" method="POST">
+            <div class="form-group">
+                <label for="snr_num">Number of SNRs:</label>
+                <br>
+                <input id="snr_num" name="snr_num" type="number" value="5" style="width:85%">
+            </div>
+            <div class="form-group">
+                <label for="snr_len">Length of SNRs: </label>
+                <br>
+                <input id="snr_len" name="snr_len" type="number" value="15" style="width:85%">
+            </div>
+            <div class="form-group">
+                <label for="n_part">Number of participants: </label>
+                <br>
+                <input id="n_part" name="n_part" type="number" value="70" style="width:85%">
+            </div>
+            <div class="form-group">
+                <label for="open-mat-folder-container">Matrix data folder: </label>
+                <br>
+                <input type="text" id="mat-dir" name='mat_dir' style="width:85%"></input>
+                <button type="button" id="mat-dir-button" class="btn btn-primary">Browse...</button>
+            </div>
+            <div class="form-group">
+                <label for="open-save-folder-container">New data generation folder: </label>
+                <br>
+                <input type="text" id="save-dir" name='save_dir' style="width:85%"></input>
+                <button type="button" id="save-dir-button" class="btn btn-primary">Browse...</button>
+            </div>
+            <div class="form-group">
+                <button type="button" id="process-button" class="btn btn-primary">Process</button>
+            <div>
+            <div class="form-group">
+                <div id="progress-div" class="progress">
+                    <div id="progress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    $(document).ready(function(){
+        // Initialise socketio with a namespace called "main"
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+
+        // Catch progress bar update messages
+        socket.on('update-progress', function(msg) {
+            // Update width of progress bar
+            $('#progress').css("width", msg.data);
+        });
+
+        // Catch message when asynchronous process is complete
+        socket.on('processing-complete', function(msg) {
+            // Re-enable all inputs
+            $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
+        });
+
+        $('#process-button').click(function(event) {
+            // Disable all inputs whilst processing
+            $('#main-div').find('input, textarea, button, select').attr('disabled','disabled');
+            // Send message to call stimulus generation function in Python
+            socket.emit('run_mat_stim_gen', {data: "YES"});
+            return false;
+        });
+
+        $('#save-dir-button').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('open_save_dialog');
+            return false;
+        })
+
+        socket.on('save-dialog-resp', function(msg) {
+            // Set form test to filepath returned by dialog
+            document.getElementById("save-dir").value = msg.data
+        });
+
+        $('#mat-dir-button').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('open_mat_dialog');
+            return false;
+        })
+
+        socket.on('mat-dialog-resp', function(msg) {
+            // Set form test to filepath returned by dialog
+            document.getElementById("mat-dir").value = msg.data
+        });
+    });
+</script>
+{% endblock %}

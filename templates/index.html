@@ -1,0 +1,102 @@
+<html>
+<link rel="stylesheet" media="screen" href = "{{ url_for('static', filename='bootstrap.min.css') }}">
+<meta name="viewport" content = "width=device-width, initial-scale=1.0">
+<head>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script src="http://code.highcharts.com/highcharts.js"></script>
+    <script type="text/javascript" src = "/static/bootstrap.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+</head>
+
+<body class = "body">
+    <nav id="main-nav" class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" href="#">BPLabs v0.1</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+                <a class="nav-link" href="Home">Home <span class="sr-only">(current)</span></a>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Stimulus generation
+                </a>
+                <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                <a class="dropdown-item" href="mat_dec_stim">Matrix decoder stimulus</a>
+                <a class="dropdown-item" href="click_Stim">Click stimulus</a>
+                <a class="dropdown-item" href="da_stim">/da/ stimulus</a>
+                </div>
+            </li>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Experiment procedure
+                </a>
+                <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                <a class="dropdown-item" href="#">PTA</a>
+                <a class="dropdown-item" href="#">Tympanometry</a>
+                <a class="dropdown-item" href="#">EEG recording</a>
+                </div>
+            </li>
+            </ul>
+        </div>
+    </nav>
+    {% block content %}{% endblock %}
+
+    <script>
+        // From https://gist.github.com/dharmavir/936328
+        function getHttpRequestObject()
+        {
+            // Define and initialize as false
+            var xmlHttpRequst = false;
+
+            // Mozilla/Safari/Non-IE
+            if (window.XMLHttpRequest)
+            {
+                xmlHttpRequst = new XMLHttpRequest();
+            }
+            // IE
+            else if (window.ActiveXObject)
+            {
+                xmlHttpRequst = new ActiveXObject("Microsoft.XMLHTTP");
+            }
+            return xmlHttpRequst;
+        }
+        // Does the AJAX call to URL specific with rest of the parameters
+        function doAjax(url, method, responseHandler, data)
+        {
+            // Set the variables
+            url = url || "";
+            method = method || "GET";
+            async = true;
+            data = data || null;
+
+            if(url == "") {
+                alert("URL can not be null/blank");
+                return false;
+            }
+            var xmlHttpRequest = getHttpRequestObject();
+
+            // If AJAX supported
+            if(xmlHttpRequest != false) {
+                xmlHttpRequest.open(method, url, async);
+                // Set request header (optional if GET method is used)
+                if(method == "POST")  {
+                    xmlHttpRequest.setRequestHeader("Content-Type", "application/json");
+                }
+                // Assign (or define) response-handler/callback when ReadyState is changed.
+                xmlHttpRequest.onreadystatechange = responseHandler;
+                // Send data
+                xmlHttpRequest.send(data);
+            }
+            else
+            {
+                alert("Please use browser with Ajax support.!");
+            }
+        }
+    </script>
+</body>
+
+</html>
