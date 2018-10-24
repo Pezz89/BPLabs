@@ -67,7 +67,13 @@
             // Disable all inputs whilst processing
             $('#main-div').find('input, textarea, button, select').attr('disabled','disabled');
             // Send message to call stimulus generation function in Python
-            socket.emit('run_mat_stim_gen', {data: "YES"});
+            socket.emit('run_mat_stim_gen', {
+                n_part: $("#n_part").val(),
+                snr_len: $("#snr_len").val(),
+                snr_num: $("#snr_num").val(),
+                mat_dir: $("#mat-dir").val(),
+                save_dir: $("#save-dir").val(),
+            });
             return false;
         });
 

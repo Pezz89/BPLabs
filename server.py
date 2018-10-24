@@ -10,6 +10,8 @@ import app
 import time
 from threading import Thread, Event
 
+from app import generate_matrix_stimulus
+
 import config
 
 server = config.server
@@ -81,21 +83,17 @@ class StimGenThread(Thread):
     Thread object for asynchronous processing of data in Python without locking
     up the GUI
     '''
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         super(StimGenThread, self).__init__()
+        self.args = args
 
 
     def process_stimulus(self):
         '''
         An example process
         '''
-        for participant_n in range(15):
-            percent = ((participant_n+1) / 15)*100.
-            # Emit a message to update the progress bar during execution of the
-            # python process (see relevant javascript code in
-            # matrix_decode_stim.html)
-            socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
-            time.sleep(1)
+        generate_matrix_stimulus(*self.args)
+        #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
 
 
     def run(self):
@@ -113,7 +111,12 @@ def generateStim(msg):
     process
     '''
     global thread
-    thread = StimGenThread()
+    n_part = int(msg['n_part'])
+    snr_len = float(msg['snr_len'])
+    snr_num = int(msg['snr_num'])
+    mat_dir = msg['mat_dir']
+    save_dir = msg['save_dir']
+    thread = StimGenThread(socketio, n_part, snr_len, snr_num, mat_dir, save_dir)
     thread.start()
 
 @socketio.on('check-mat-processing-status', namespace='/main')
