@@ -15,6 +15,7 @@ import config
 server = config.server
 socketio = config.socketio
 
+
 @server.after_request
 def add_header(response):
     # Disable caching? unsure why...
@@ -72,8 +73,8 @@ def homepage():
 def matDecStim():
     return render_template("matrix_decode_stim.html")
 
-thread = Thread()
-thread_stop_event = Event()
+# thread = Thread()
+# thread_stop_event = Event()
 
 class StimGenThread(Thread):
     '''
@@ -111,8 +112,19 @@ def generateStim(msg):
     When process buton is clicked in GUI, start an asynchronous thread to run
     process
     '''
+    global thread
     thread = StimGenThread()
     thread.start()
+
+@socketio.on('check-mat-processing-status', namespace='/main')
+def checkMatProcessingStatus():
+    global thread
+    if thread.is_alive():
+        socketio.emit('mat-processing-status', {'data': True}, namespace='/main')
+    else:
+        socketio.emit('mat-processing-status', {'data': False}, namespace='/main')
+
+
 
 @socketio.on('open_save_dialog', namespace='/main')
 def openSaveDialog():

@@ -32,7 +32,7 @@
             </div>
             <div class="form-group">
                 <button type="button" id="process-button" class="btn btn-primary">Process</button>
-            <div>
+            </div>
             <div class="form-group">
                 <div id="progress-div" class="progress">
                     <div id="progress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
@@ -45,17 +45,22 @@
     $(document).ready(function(){
         // Initialise socketio with a namespace called "main"
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+        // Check if matrix stimulus is currently being processed
+        socket.emit('check-mat-processing-status');
+
+        // If stimulus is currently being processed, disable all inputs
+        socket.on('mat-processing-status', function(msg) {
+            console.log(msg.data)
+            if(msg.data) {
+                // Update width of progress bar
+                $('#main-div').find('input, textarea, button, select').attr('disabled','disabled');
+            }
+        });
 
         // Catch progress bar update messages
         socket.on('update-progress', function(msg) {
             // Update width of progress bar
             $('#progress').css("width", msg.data);
-        });
-
-        // Catch message when asynchronous process is complete
-        socket.on('processing-complete', function(msg) {
-            // Re-enable all inputs
-            $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
         });
 
         $('#process-button').click(function(event) {
