@@ -86,13 +86,14 @@ class StimGenThread(Thread):
     def __init__(self, *args, **kwargs):
         super(StimGenThread, self).__init__()
         self.args = args
+        self.kwargs = kwargs
 
 
     def process_stimulus(self):
         '''
         An example process
         '''
-        generate_matrix_stimulus(*self.args)
+        filenames = generate_matrix_stimulus(*self.args, **self.kwargs)
         #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
 
 
@@ -116,7 +117,7 @@ def generateStim(msg):
     snr_num = int(msg['snr_num'])
     mat_dir = msg['mat_dir']
     save_dir = msg['save_dir']
-    thread = StimGenThread(socketio, n_part, snr_len, snr_num, mat_dir, save_dir)
+    thread = StimGenThread(n_part, snr_len, snr_num, mat_dir, save_dir, socketio=socketio)
     thread.start()
 
 @socketio.on('check-mat-processing-status', namespace='/main')
