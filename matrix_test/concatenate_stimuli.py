@@ -86,7 +86,7 @@ if __name__ == "__main__":
                                      'training TRF decoder by concatenating '
                                      'matrix test materials')
     parser.add_argument('--MatrixDir', type=PathType(exists=True, type='dir'),
-                        default='./Matrix_test_speech',
+                        default='./speech_components',
                         help='Matrix test speech data location')
     parser.add_argument('--OutDir', type=PathType(exists=None, type='dir'),
                         default='./out_concat', help='Output directory')

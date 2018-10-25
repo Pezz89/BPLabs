@@ -14,44 +14,14 @@ from natsort import natsorted
 from collections import namedtuple
 import pysndfile
 from pysndfile import PySndfile
+import matplotlib.pyplot as plt
 
+import scipy.signal as sgnl
 
-def globDir(directory, pattern):
-    '''
-    Return all files in a directory matching the unix glob pattern, ignoring
-    case
-    '''
-    def absoluteFilePaths(directory):
-        for dirpath,_,filenames in os.walk(directory):
-            for f in filenames:
-                yield os.path.abspath(os.path.join(dirpath, f))
-    speech_file_pattern = re.compile(fnmatch.translate(pattern), re.IGNORECASE)
-    filepaths = []
-    for item in absoluteFilePaths(directory):
-        if bool(speech_file_pattern.match(os.path.basename(item))):
-            filepaths.append(item)
-    return filepaths
+from lpc import lpc
 
-def organiseWavs(wavFiles):
-    '''
-    Returns a dictionary of FileTuple('filename', 'filepath') objects.
-    Each dictionary key represents a column from a-e
-    '''
-    wavFiles = natsorted(wavFiles)
-    # create dictionary of {wav filename: wav filepath} key, value pairs
-    fileTuple = namedtuple('FileTuple', ['filename', 'filepath'])
-    wavFileTuples = [fileTuple._make([os.path.basename(os.path.splitext(a)[0]), a]) for a in wavFiles]
-    # Separate gap files
-    gaps = wavFileTuples[:3]
-    wavFileTuples = wavFileTuples[3:]
-    # Sort files into columns
-    columnNames = ['a', 'b', 'c', 'd', 'e']
-    i = 0
-    wavFileMatrix = {}
-    for col in columnNames:
-        wavFileMatrix[col] = wavFileTuples[i:i+100]
-        i += 100
-    return wavFileMatrix
+from filesystem import globDir, organiseWavs, prepareOutDir
+
 
 def rolling_window_lastaxis(a, window):
     """Directly taken from Erik Rigtorp's post to numpy-discussion.
@@ -63,6 +33,7 @@ def rolling_window_lastaxis(a, window):
     shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
     strides = a.strides + (a.strides[-1],)
     return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
+
 
 def synthesizeTrial(wavFileMatrix, indexes):
     '''
@@ -102,24 +73,6 @@ def generateTrialInds(n=1):
         indexes[ind] = [int(i) for i in str(c).zfill(5)]
     return indexes
 
-def prepareOutDir(folder):
-    '''
-    Check that the specified output directory exists and remove any
-    pre-existing files and folders from it
-    '''
-    try:
-        os.mkdir(folder)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-    for the_file in os.listdir(folder):
-        file_path = os.path.join(folder, the_file)
-        try:
-            if os.path.isfile(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path): shutil.rmtree(file_path)
-        except Exception as e:
-            print(e)
 
 def generateStimulus(MatrixDir, OutDir, Length, socketio=None):
     # Get matrix wav file paths
@@ -148,6 +101,31 @@ def generateStimulus(MatrixDir, OutDir, Length, socketio=None):
     return files
 
 
+def generateSpeechShapedNoise(x, order=500, plot=False):
+    '''
+    Generate speech shaped noise from input signal x.
+    Linear Predictive Coding is used to estimate and FIR filter of the order
+    specified. This is then used to filter white noise.
+    '''
+    a, e, k = lpc(x, order=order)
+    noise = np.random.randn(x.size)*np.sqrt(e)
+    b = np.zeros(a.size)
+    b[0] = 1
+    y = sgnl.lfilter(b,a,noise)
+    if plot:
+        M=fs/10;
+        f, Px_den = sgnl.welch(x,window='hamming', nperseg=M, nfft=M)
+        f, Py_den = sgnl.welch(y,window='hamming', nperseg=M, nfft=M)
+        plt.semilogy(f, Px_den)
+        plt.semilogy(f, Py_den)
+        #plt.ylim([0.5e-3, 1])
+        plt.xlabel('frequency [Hz]')
+        plt.ylabel('PSD [V**2/Hz]')
+        plt.show()
+
+    return y
+
+
 if __name__ == "__main__":
     from pathtype import PathType
     # Create commandline interface
@@ -155,14 +133,15 @@ if __name__ == "__main__":
                                      'training TRF decoder by concatenating '
                                      'matrix test materials')
     parser.add_argument('--MatrixDir', type=PathType(exists=True, type='dir'),
-                        default='./Matrix_test_speech',
+                        default='./speech_components',
                         help='Matrix test speech data location')
     parser.add_argument('--OutDir', type=PathType(exists=None, type='dir'),
                         default='./out_trials', help='Output directory')
     parser.add_argument('--Length', type=int, default=60,
                         help='Concatenated length of trials in seconds')
     args = {k:v for k,v in vars(parser.parse_args()).items() if v is not None}
-
+    generateSpeechShapedNoise(order=500)
+    exit()
     # Generate output directory if it doesn't exist
     prepareOutDir(args['OutDir'])
 

@@ -24,3 +24,7 @@ def generate_matrix_stimulus(n_part, snr_len, snr_num, mat_dir, save_dir, socket
 
     filenames = generateStimulus(mat_dir, sentDir, genLength, socketio=socketio)
     return filenames
+
+def generate_speech_shaped_noise(, order=500):
+    '''
+    '''
