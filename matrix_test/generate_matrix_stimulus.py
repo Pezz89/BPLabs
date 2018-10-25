@@ -3,8 +3,8 @@
 
 import argparse
 import os
-import shutil
 import errno
+import shutil
 import re
 import fnmatch
 import pdb
@@ -15,6 +15,7 @@ from collections import namedtuple
 import pysndfile
 from pysndfile import PySndfile
 import matplotlib.pyplot as plt
+from pathops import dir_must_exist
 
 import scipy.signal as sgnl
 
@@ -101,18 +102,21 @@ def generateStimulus(MatrixDir, OutDir, Length, socketio=None):
     return files
 
 
-def generateSpeechShapedNoise(x, order=500, plot=False):
+def processNoise(x, order=500, plot=False, fs=None):
     '''
     Generate speech shaped noise from input signal x.
     Linear Predictive Coding is used to estimate and FIR filter of the order
     specified. This is then used to filter white noise.
     '''
+    print("Calculating filter coefficients")
     a, e, k = lpc(x, order=order)
     noise = np.random.randn(x.size)*np.sqrt(e)
     b = np.zeros(a.size)
     b[0] = 1
+    print("Filtering white noise")
     y = sgnl.lfilter(b,a,noise)
     if plot:
+        print("Plotting...")
         M=fs/10;
         f, Px_den = sgnl.welch(x,window='hamming', nperseg=M, nfft=M)
         f, Py_den = sgnl.welch(y,window='hamming', nperseg=M, nfft=M)
@@ -124,6 +128,21 @@ def generateSpeechShapedNoise(x, order=500, plot=False):
         plt.show()
 
     return y
+
+
+def generateSpeechShapedNoise(SentenceDir, OutDir, order=500, plot=False, socketio=None):
+    wavFiles = globDir(SentenceDir, '*.wav')
+
+    data = []
+    for path in wavFiles:
+        audio, fs, enc, fmt = pysndfile.sndio.read(path, return_format=True)
+        data.append(audio)
+    x = np.concatenate(data)
+    print("Done...")
+    y = processNoise(x, order=order, plot=plot, fs=fs)
+    noiseFile = os.path.join(OutDir, 'SSN.wav')
+    pysndfile.sndio.write(os.path.join(OutDir, 'SSN.wav'), y, rate=fs, format=fmt, enc=enc)
+    return noiseFile
 
 
 if __name__ == "__main__":
@@ -140,10 +159,19 @@ if __name__ == "__main__":
     parser.add_argument('--Length', type=int, default=60,
                         help='Concatenated length of trials in seconds')
     args = {k:v for k,v in vars(parser.parse_args()).items() if v is not None}
-    generateSpeechShapedNoise(order=500)
-    exit()
+
+    if os.path.exists(args['OutDir']):
+        shutil.rmtree(args['OutDir'])
+        os.makedirs(args['OutDir'])
     # Generate output directory if it doesn't exist
     prepareOutDir(args['OutDir'])
 
+
     # Generate stimulus from arguments provided on command line
     generateStimulus(**args)
+
+    # Check directory for storing generated noise exists
+    noiseDir = os.path.join(args['OutDir'], 'noise')
+    dir_must_exist(noiseDir)
+
+    generateSpeechShapedNoise(args['OutDir'], noiseDir, order=500, plot=True)
