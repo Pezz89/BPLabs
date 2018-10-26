@@ -174,4 +174,4 @@ if __name__ == "__main__":
     noiseDir = os.path.join(args['OutDir'], 'noise')
     dir_must_exist(noiseDir)
 
-    generateSpeechShapedNoise(args['OutDir'], noiseDir, order=500, plot=True)
+    generateSpeechShapedNoise(args['OutDir'], noiseDir, order=20, plot=True)
