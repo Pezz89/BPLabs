@@ -25,6 +25,10 @@ def generate_matrix_stimulus(n_part, snr_len, snr_num, mat_dir, save_dir, socket
     filenames = generateStimulus(mat_dir, sentDir, genLength, socketio=socketio)
     return filenames
 
-def generate_speech_shaped_noise(, order=500):
+def generate_speech_shaped_noise(sentence_dir, save_dir, order=500):
     '''
     '''
+    pathops.dir_must_exist(save_dir)
+    pathops.dir_must_exist(mat_dir)
+    order = int(order)
+    generateSpeechShapedNoise(sentence_dir, save_dir, order=500, plot=True)

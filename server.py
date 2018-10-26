@@ -94,6 +94,7 @@ class StimGenThread(Thread):
         An example process
         '''
         filenames = generate_matrix_stimulus(*self.args, **self.kwargs)
+        generateSpeechShapedNoise(args['OutDir'], noiseDir, order=20, plot=True)
         #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
 
 

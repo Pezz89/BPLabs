@@ -4,6 +4,7 @@
 
 import numpy as np
 from scipy.fftpack import fft, ifft
+from scipy import signal as sgnl
 
 
 __all__ = ['levinson', 'lpc']
