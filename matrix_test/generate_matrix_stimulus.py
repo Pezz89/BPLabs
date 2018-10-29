@@ -18,10 +18,12 @@ import matplotlib.pyplot as plt
 from pathops import dir_must_exist
 
 import scipy.signal as sgnl
+from scipy.stats import pearsonr
 
-from lpc import lpc
 
-from filesystem import globDir, organiseWavs, prepareOutDir
+from .lpc import lpc
+
+from .filesystem import globDir, organiseWavs, prepareOutDir
 
 
 def rolling_window_lastaxis(a, window):
@@ -130,18 +132,66 @@ def processNoise(x, order=500, plot=False, fs=None):
     return y
 
 
-def generateSpeechShapedNoise(SentenceDir, OutDir, order=500, plot=False, socketio=None):
+def optimiseLPCOrder(SentenceDir, plot=False, socketio=None):
     wavFiles = globDir(SentenceDir, '*.wav')
-
     data = []
     for path in wavFiles:
         audio, fs, enc, fmt = pysndfile.sndio.read(path, return_format=True)
         data.append(audio)
     x = np.concatenate(data)
-    print("Done...")
-    y = processNoise(x, order=order, plot=plot, fs=fs)
-    noiseFile = os.path.join(OutDir, 'SSN.wav')
-    pysndfile.sndio.write(os.path.join(OutDir, 'SSN.wav'), y, rate=fs, format=fmt, enc=enc)
+
+    # Define array of lengths in minutes to test
+    lengths = np.array([0.05, 0.2, 0.5, 0.75, 1])
+    lengths *= (fs * 60)
+    lengths = lengths.astype(int)
+    chunkCount = 5
+    start = ((np.arange(chunkCount)/chunkCount)*x.size).astype(int)
+    end = lengths + np.array([start]).T
+    end = end.T
+    start = np.tile(start, (lengths.size, 1))
+
+    PSDs = []
+    for i in range(start.shape[0]):
+        print("length: {0}".format(lengths[i]/(fs*60.)))
+        ends = end[i]
+        starts = start[i]
+        PSDs.append([])
+        for j in range(starts.size):
+            print("Chunk: {0}".format(j))
+            s = starts[j]
+            e = ends[j]
+            x_chunk = x[s:e]
+            print("Chunk size: {0}".format((e-s)/fs))
+            y, f, Px_den, Py_den = processNoise(x_chunk, order=order, plot=False, fs=fs)
+            PSDs[i].append(Py_den)
+
+    res = []
+    for i in range(len(PSDs)):
+        res.append([])
+        for j in range(len(PSDs[0])):
+            for ii in range(len(PSDs)):
+                if ii == i:
+                    continue
+                for jj in range(len(PSDs[0])):
+                    if jj == j:
+                        continue
+                    res[i].append(pearsonr(PSDs[i][j], PSDs[ii][jj])[0])
+    return [np.min(x) for x in res]
+
+
+def generateSpeechShapedNoise(SentenceDir, OutDir, order=500,plot=False, socketio=None):
+    wavFiles = globDir(SentenceDir, '*.wav')
+    data = []
+    for path in wavFiles:
+        audio, fs, enc, fmt = pysndfile.sndio.read(path, return_format=True)
+        data.append(audio)
+    x = np.concatenate(data)
+
+    for offset in
+        for start, end in
+        y = processNoise(x, order=order, plot=plot, fs=fs)
+        noiseFile = os.path.join(OutDir, 'SSN.wav')
+        pysndfile.sndio.write(os.path.join(OutDir, 'SSN.wav'), y, rate=fs, format=fmt, enc=enc)
     return noiseFile
 
 
@@ -174,4 +224,10 @@ if __name__ == "__main__":
     noiseDir = os.path.join(args['OutDir'], 'noise')
     dir_must_exist(noiseDir)
 
-    generateSpeechShapedNoise(args['OutDir'], noiseDir, order=20, plot=True)
+
+    res = []
+    for order in range(25):
+        o = order * 25
+        res.append(generateSpeechShapedNoise(args['OutDir'], noiseDir, order=o+1, plot=True))
+        #print("Order: {0}, result: {1}".format(o+1, res[-1]))
+    pdb.set_trace()
