@@ -20,10 +20,17 @@ from pathops import dir_must_exist
 import scipy.signal as sgnl
 from scipy.stats import pearsonr
 
+from pyswarm import pso
 
-from .lpc import lpc
+try:
+    from lpc import lpc
+except ImportError:
+    from .lpc import lpc
 
-from .filesystem import globDir, organiseWavs, prepareOutDir
+try:
+    from filesystem import globDir, organiseWavs, prepareOutDir
+except ImportError:
+    from .filesystem import globDir, organiseWavs, prepareOutDir
 
 
 def rolling_window_lastaxis(a, window):
@@ -131,52 +138,48 @@ def processNoise(x, order=500, plot=False, fs=None):
 
     return y
 
+def calcLPC(x, order, fs):
+    a, e, k = lpc(x, order=order)
+    noise = np.random.randn(x.size)*np.sqrt(e)
+    b = np.zeros(a.size)
+    b[0] = 1
+    print("Filtering white noise")
+    y = sgnl.lfilter(b,a,noise)
+    M=fs/10;
+    f, Px_den = sgnl.welch(x,window='hamming', nperseg=M, nfft=M)
+    f, Py_den = sgnl.welch(y,window='hamming', nperseg=M, nfft=M)
+    resid = Px_den - Py_den
+    sse = sum(resid**2)
+    AIC= 2*order - 2*np.log(sse)
+    return y, AIC
 
-def optimiseLPCOrder(SentenceDir, plot=False, socketio=None):
-    wavFiles = globDir(SentenceDir, '*.wav')
-    data = []
-    for path in wavFiles:
-        audio, fs, enc, fmt = pysndfile.sndio.read(path, return_format=True)
-        data.append(audio)
-    x = np.concatenate(data)
+def __calcLPCChunksPSOWrapper(params, *args):
+    x = args[0]
+    fs = args[1]
+    length = args[2]
+    order = int(round(params[0]))
+    return calcLPCChunks(x, fs, plot=False, socketio=None, order=order, length=length)
 
+def calcLPCChunks(x, fs, plot=False, socketio=None, order=500, length=1):
     # Define array of lengths in minutes to test
-    lengths = np.array([0.05, 0.2, 0.5, 0.75, 1])
-    lengths *= (fs * 60)
-    lengths = lengths.astype(int)
+    length *= (fs * 60)
+    length = int(length)
     chunkCount = 5
     start = ((np.arange(chunkCount)/chunkCount)*x.size).astype(int)
-    end = lengths + np.array([start]).T
-    end = end.T
-    start = np.tile(start, (lengths.size, 1))
+    end = length + start
 
-    PSDs = []
-    for i in range(start.shape[0]):
-        print("length: {0}".format(lengths[i]/(fs*60.)))
-        ends = end[i]
-        starts = start[i]
-        PSDs.append([])
-        for j in range(starts.size):
-            print("Chunk: {0}".format(j))
-            s = starts[j]
-            e = ends[j]
-            x_chunk = x[s:e]
-            print("Chunk size: {0}".format((e-s)/fs))
-            y, f, Px_den, Py_den = processNoise(x_chunk, order=order, plot=False, fs=fs)
-            PSDs[i].append(Py_den)
+    res = np.zeros(chunkCount)
+    for j in range(start.size):
+        print("Chunk: {0}".format(j))
+        s = start[j]
+        e = end[j]
 
-    res = []
-    for i in range(len(PSDs)):
-        res.append([])
-        for j in range(len(PSDs[0])):
-            for ii in range(len(PSDs)):
-                if ii == i:
-                    continue
-                for jj in range(len(PSDs[0])):
-                    if jj == j:
-                        continue
-                    res[i].append(pearsonr(PSDs[i][j], PSDs[ii][jj])[0])
-    return [np.min(x) for x in res]
+        x_chunk = x[s:e]
+        print("Chunk size: {0}".format((e-s)/fs))
+        print("Order: {0}".format(order))
+        y, aic = calcLPC(x_chunk, order, fs)
+        res[j] = aic
+    return np.mean(res)
 
 
 def generateSpeechShapedNoise(SentenceDir, OutDir, order=500,plot=False, socketio=None):
@@ -187,11 +190,9 @@ def generateSpeechShapedNoise(SentenceDir, OutDir, order=500,plot=False, socketi
         data.append(audio)
     x = np.concatenate(data)
 
-    for offset in
-        for start, end in
-        y = processNoise(x, order=order, plot=plot, fs=fs)
-        noiseFile = os.path.join(OutDir, 'SSN.wav')
-        pysndfile.sndio.write(os.path.join(OutDir, 'SSN.wav'), y, rate=fs, format=fmt, enc=enc)
+    y = processNoise(x, order=order, plot=plot, fs=fs)
+    noiseFile = os.path.join(OutDir, 'SSN.wav')
+    pysndfile.sndio.write(os.path.join(OutDir, 'SSN.wav'), y, rate=fs, format=fmt, enc=enc)
     return noiseFile
 
 
@@ -225,9 +226,15 @@ if __name__ == "__main__":
     dir_must_exist(noiseDir)
 
 
-    res = []
-    for order in range(25):
-        o = order * 25
-        res.append(generateSpeechShapedNoise(args['OutDir'], noiseDir, order=o+1, plot=True))
-        #print("Order: {0}, result: {1}".format(o+1, res[-1]))
+    wavFiles = globDir(args["OutDir"], '*.wav')
+    data = []
+    for path in wavFiles:
+        audio, fs, enc, fmt = pysndfile.sndio.read(path, return_format=True)
+        data.append(audio)
+    x = np.concatenate(data)
+
+    args = [x, fs, 0.05]
+    lb = [1]
+    ub = [1000]
+    xopt, fopt = pso(__calcLPCChunksPSOWrapper, lb, ub, args=args)
     pdb.set_trace()
