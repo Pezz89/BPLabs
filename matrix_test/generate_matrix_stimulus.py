@@ -118,17 +118,32 @@ def processNoise(x, order=500, plot=False, fs=None):
     specified. This is then used to filter white noise.
     '''
     print("Calculating filter coefficients")
-    a, e, k = lpc(x, order=order)
+    x_fit = x[:fs*60*2]
+    a, e, k = lpc(x_fit, order=order)
     noise = np.random.randn(x.size)*np.sqrt(e)
     b = np.zeros(a.size)
     b[0] = 1
     print("Filtering white noise")
-    y = sgnl.lfilter(b,a,noise)
-    if plot:
+    new_state = np.zeros(a.size-1)
+    out = np.zeros(noise.size)
+    blocksize = 8192
+    i = 0
+    while i < noise.size:
+        print("Filtering {0} to {1} of {2}".format(i, i+blocksize, out.size))
+        if i+blocksize > noise.size:
+            y, new_state = sgnl.lfilter(b,a,noise[i:-1], zi=new_state)
+            out[i:-1]=y
+        else:
+            y, new_state = sgnl.lfilter(b,a,noise[i:i+blocksize], zi=new_state)
+            out[i:i+blocksize]=y
+        i += blocksize
+    y = out
+
+    if True:
         print("Plotting...")
         M=fs/10;
-        f, Px_den = sgnl.welch(x,window='hamming', nperseg=M, nfft=M)
-        f, Py_den = sgnl.welch(y,window='hamming', nperseg=M, nfft=M)
+        f, Px_den = sgnl.welch(x[:fs*60*2],window='hamming', nperseg=M, nfft=M)
+        f, Py_den = sgnl.welch(y[:fs*60*2],window='hamming', nperseg=M, nfft=M)
         plt.semilogy(f, Px_den)
         plt.semilogy(f, Py_den)
         #plt.ylim([0.5e-3, 1])
@@ -192,6 +207,7 @@ def generateSpeechShapedNoise(SentenceDir, OutDir, order=500,plot=False, socketi
 
     y = processNoise(x, order=order, plot=plot, fs=fs)
     noiseFile = os.path.join(OutDir, 'SSN.wav')
+    print("Writing file...")
     pysndfile.sndio.write(os.path.join(OutDir, 'SSN.wav'), y, rate=fs, format=fmt, enc=enc)
     return noiseFile
 
@@ -225,7 +241,10 @@ if __name__ == "__main__":
     noiseDir = os.path.join(args['OutDir'], 'noise')
     dir_must_exist(noiseDir)
 
+    generateSpeechShapedNoise(args['OutDir'], noiseDir)
 
+
+    '''
     wavFiles = globDir(args["OutDir"], '*.wav')
     data = []
     for path in wavFiles:
@@ -238,3 +257,4 @@ if __name__ == "__main__":
     ub = [1000]
     xopt, fopt = pso(__calcLPCChunksPSOWrapper, lb, ub, args=args)
     pdb.set_trace()
+    '''
