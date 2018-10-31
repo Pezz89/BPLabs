@@ -15,7 +15,9 @@ from collections import namedtuple
 import pysndfile
 from pysndfile import PySndfile
 import matplotlib.pyplot as plt
+
 from pathops import dir_must_exist
+from signalops import rolling_window_lastaxis, block_lfilter
 
 import scipy.signal as sgnl
 from scipy.stats import pearsonr
@@ -31,18 +33,6 @@ try:
     from filesystem import globDir, organiseWavs, prepareOutDir
 except ImportError:
     from .filesystem import globDir, organiseWavs, prepareOutDir
-
-
-def rolling_window_lastaxis(a, window):
-    """Directly taken from Erik Rigtorp's post to numpy-discussion.
-    <http://www.mail-archive.com/numpy-discussion@scipy.org/msg29450.html>"""
-    if window < 1:
-       raise ValueError("`window` must be at least 1.")
-    if window > a.shape[-1]:
-       raise ValueError("`window` is too long.")
-    shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
-    strides = a.strides + (a.strides[-1],)
-    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
 
 
 def synthesizeTrial(wavFileMatrix, indexes):
@@ -84,7 +74,7 @@ def generateTrialInds(n=1):
     return indexes
 
 
-def generateStimulus(MatrixDir, OutDir, Length, socketio=None):
+def generateAudioStimulus(MatrixDir, OutDir, Length, socketio=None):
     # Get matrix wav file paths
     wavFiles = globDir(MatrixDir, '*.wav')
     wavFileMatrix = organiseWavs(wavFiles)
@@ -119,47 +109,31 @@ def processNoise(x, order=500, plot=False, fs=None):
     '''
     print("Calculating filter coefficients")
     x_fit = x[:fs*60*2]
-    a, e, k = lpc(x_fit, order=order)
-    noise = np.random.randn(x.size)*np.sqrt(e)
-    b = np.zeros(a.size)
-    b[0] = 1
-    print("Filtering white noise")
-    new_state = np.zeros(a.size-1)
-    out = np.zeros(noise.size)
-    blocksize = 8192
-    i = 0
-    while i < noise.size:
-        print("Filtering {0} to {1} of {2}".format(i, i+blocksize, out.size))
-        if i+blocksize > noise.size:
-            y, new_state = sgnl.lfilter(b,a,noise[i:-1], zi=new_state)
-            out[i:-1]=y
-        else:
-            y, new_state = sgnl.lfilter(b,a,noise[i:i+blocksize], zi=new_state)
-            out[i:i+blocksize]=y
-        i += blocksize
-    y = out
-
-    if True:
-        print("Plotting...")
-        M=fs/10;
-        f, Px_den = sgnl.welch(x[:fs*60*2],window='hamming', nperseg=M, nfft=M)
-        f, Py_den = sgnl.welch(y[:fs*60*2],window='hamming', nperseg=M, nfft=M)
-        plt.semilogy(f, Px_den)
-        plt.semilogy(f, Py_den)
-        #plt.ylim([0.5e-3, 1])
-        plt.xlabel('frequency [Hz]')
-        plt.ylabel('PSD [V**2/Hz]')
-        plt.show()
+    # Calculate filter coefficients using 2 minutes of speech
+    b, a, e, k = calcLPC(x_fit, order, fs)
+    # Generate and filter noise using calculted filter coefficients
+    y = generateNoise(b, a, x.size, e, fs)
+    # Calculate AIC of fitted filter
+    #AIC = calcAIC(x, y, fs)
+    if plot:
+        plotLPC(x, y, fs)
 
     return y
 
 def calcLPC(x, order, fs):
     a, e, k = lpc(x, order=order)
-    noise = np.random.randn(x.size)*np.sqrt(e)
     b = np.zeros(a.size)
     b[0] = 1
+    return b, a, e, k
+
+def generateNoise(b, a, size, e, fs):
     print("Filtering white noise")
-    y = sgnl.lfilter(b,a,noise)
+    noise = np.random.randn(size)*np.sqrt(e)
+    y = block_lfilter(b, a, noise)
+    return y
+
+
+def calcAIC(x, y, fs):
     M=fs/10;
     f, Px_den = sgnl.welch(x,window='hamming', nperseg=M, nfft=M)
     f, Py_den = sgnl.welch(y,window='hamming', nperseg=M, nfft=M)
@@ -167,6 +141,20 @@ def calcLPC(x, order, fs):
     sse = sum(resid**2)
     AIC= 2*order - 2*np.log(sse)
     return y, AIC
+
+
+def plotLPC(x, y, fs):
+    print("Plotting spectrum of the first 2 minutes of signal...")
+    M=fs/10;
+    f, Px_den = sgnl.welch(x[:fs*60*2],window='hamming', nperseg=M, nfft=M)
+    f, Py_den = sgnl.welch(y[:fs*60*2],window='hamming', nperseg=M, nfft=M)
+    plt.semilogy(f, Px_den)
+    plt.semilogy(f, Py_den)
+    #plt.ylim([0.5e-3, 1])
+    plt.xlabel('frequency [Hz]')
+    plt.ylabel('PSD [V**2/Hz]')
+    plt.show()
+
 
 def __calcLPCChunksPSOWrapper(params, *args):
     x = args[0]
@@ -197,7 +185,12 @@ def calcLPCChunks(x, fs, plot=False, socketio=None, order=500, length=1):
     return np.mean(res)
 
 
-def generateSpeechShapedNoise(SentenceDir, OutDir, order=500,plot=False, socketio=None):
+def generateNoiseFromSentences(SentenceDir, OutDir, order=500, plot=False, socketio=None):
+    '''
+    Fit speech shaped noise to all wav files found in SentenceDir. Output
+    speech shaped noise of a length equal to the combined length of all found
+    audio in SentenceDir to OutDir.
+    '''
     wavFiles = globDir(SentenceDir, '*.wav')
     data = []
     for path in wavFiles:
@@ -234,14 +227,14 @@ if __name__ == "__main__":
     prepareOutDir(args['OutDir'])
 
 
-    # Generate stimulus from arguments provided on command line
-    generateStimulus(**args)
+    # Generate audio stimulus from arguments provided on command line
+    generateAudioStimulus(**args)
 
     # Check directory for storing generated noise exists
     noiseDir = os.path.join(args['OutDir'], 'noise')
     dir_must_exist(noiseDir)
 
-    generateSpeechShapedNoise(args['OutDir'], noiseDir)
+    generateNoiseFromSentences(args['OutDir'], noiseDir)
 
 
     '''
