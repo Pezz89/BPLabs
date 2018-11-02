@@ -17,7 +17,10 @@ from pysndfile import PySndfile
 import matplotlib.pyplot as plt
 
 from pathops import dir_must_exist
-from signalops import rolling_window_lastaxis, block_lfilter
+try:
+    from signalops import rolling_window_lastaxis, block_lfilter
+except ImportError:
+    from .signalops import rolling_window_lastaxis, block_lfilter
 
 import scipy.signal as sgnl
 from scipy.stats import pearsonr
@@ -185,6 +188,54 @@ def calcLPCChunks(x, fs, plot=False, socketio=None, order=500, length=1):
     return np.mean(res)
 
 
+def find_nearest(array, value):
+    '''
+    taken from:
+        https://stackoverflow.com/questions/2566412/find-nearest-value-in-numpy-array
+    '''
+    array = np.array([array])
+    value = np.array([value])
+    idx = (np.abs(array - value.T)).argmin(axis=1)
+    return idx
+
+def generateDecoderAudio(SentenceDir, NoiseDir, OutDir, n_splits=8):
+    '''
+    Generate stimulus for training decoder at set SNRs using previous
+    synthesized matrix test audio and spech shaped noise.
+    '''
+    n_splits = float(n_splits)
+    wavFiles = globDir(SentenceDir, '*.wav')
+    data = []
+    markers = []
+    i = 0
+    for path in wavFiles:
+        audio, fs, enc, fmt = pysndfile.sndio.read(path, return_format=True)
+        silenceLen = int(0.1*fs)
+        silence = np.zeros(silenceLen)
+        chunk = np.append(audio, silence)
+        data.append(chunk)
+        markers.append(i)
+        i += chunk.size
+    markers = np.array(markers)
+    split_size = i / n_splits
+    splits = np.arange(n_splits) * split_size
+
+    idx = find_nearest(markers, splits)
+    idx = np.append(idx, len(data))
+    idx = rolling_window_lastaxis(idx, 2)
+    splitData = []
+    for start, end in idx:
+        splitData.append(np.concatenate([data[x] for x in range(start, end)]))
+    x, fs, enc, fmt = pysndfile.sndio.read(os.path.join(NoiseDir, 'SSN.wav'))
+
+    noiseData = []
+    for start, end in idx:
+        noiseData.append(x[start:end])
+
+    pdb.set_trace()
+    snr = 20*np.log10(np.sqrt(np.mean(signal**2))/np.sqrt(np.mean(noise**2)))
+
+
 def generateNoiseFromSentences(SentenceDir, OutDir, order=500, plot=False, socketio=None):
     '''
     Fit speech shaped noise to all wav files found in SentenceDir. Output
@@ -195,7 +246,11 @@ def generateNoiseFromSentences(SentenceDir, OutDir, order=500, plot=False, socke
     data = []
     for path in wavFiles:
         audio, fs, enc, fmt = pysndfile.sndio.read(path, return_format=True)
-        data.append(audio)
+        # Add add silence after each clip
+        silenceLen = int(0.1*fs)
+        silence = np.zeros(silenceLen)
+        chunk = np.append(audio, silence)
+        data.append(chunk)
     x = np.concatenate(data)
 
     y = processNoise(x, order=order, plot=plot, fs=fs)
@@ -220,6 +275,13 @@ if __name__ == "__main__":
                         help='Concatenated length of trials in seconds')
     args = {k:v for k,v in vars(parser.parse_args()).items() if v is not None}
 
+    # Check directory for storing generated noise exists
+    noiseDir = os.path.join(args['OutDir'], 'noise')
+    dir_must_exist(noiseDir)
+    decoderDir = os.path.join(args['OutDir'], 'decoder')
+    dir_must_exist(noiseDir)
+    generateDecoderAudio(args['OutDir'], noiseDir, decoderDir)
+    pdb.set_trace()
     if os.path.exists(args['OutDir']):
         shutil.rmtree(args['OutDir'])
         os.makedirs(args['OutDir'])
@@ -230,11 +292,9 @@ if __name__ == "__main__":
     # Generate audio stimulus from arguments provided on command line
     generateAudioStimulus(**args)
 
-    # Check directory for storing generated noise exists
-    noiseDir = os.path.join(args['OutDir'], 'noise')
-    dir_must_exist(noiseDir)
-
     generateNoiseFromSentences(args['OutDir'], noiseDir)
+    generateDecoderAudio(args['OutDir'], noiseDir, decoderDir)
+
 
 
     '''

@@ -1,6 +1,6 @@
 import pathops
 import os
-from matrix_test.generate_matrix_stimulus import generateStimulus
+from matrix_test.generate_matrix_stimulus import generateAudioStimulus
 import time
 
 import config
@@ -22,7 +22,7 @@ def generate_matrix_stimulus(n_part, snr_len, snr_num, mat_dir, save_dir, socket
     sentDir = os.path.join(save_dir, "sentences")
     pathops.dir_must_exist(sentDir)
 
-    filenames = generateStimulus(mat_dir, sentDir, genLength, socketio=socketio)
+    filenames = generateAudioStimulus(mat_dir, sentDir, genLength, socketio=socketio)
     return filenames
 
 def generate_speech_shaped_noise(sentence_dir, save_dir, order=500):

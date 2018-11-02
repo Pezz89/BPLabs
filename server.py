@@ -71,6 +71,14 @@ def homepage():
         return str(e)
 
 
+@server.route('/matrix_test')
+def matrix_test():
+    return render_template("matrix_test_setup.html")
+
+@server.route('/matrix_test/run')
+def run_matrix_test():
+    return render_template("run_matrix_test.html")
+
 @server.route('/mat_dec_stim')
 def matDecStim():
     return render_template("matrix_decode_stim.html")

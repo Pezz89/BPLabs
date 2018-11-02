@@ -1,0 +1,52 @@
+{% extends 'index.html' %}
+{% block content %}
+<div class="card">
+    <div id="main-div" class="card-body">
+        <form action="{{ url_for('matDecStim') }}" method="POST">
+            <div class="form-group">
+                <label for="open-mat-folder-container">Matrix data folder: </label>
+                <br>
+                <input type="text" id="mat-dir" name='mat_dir' value="./matrix_test/speech_components/" style="width:85%"></input>
+                <button type="button" id="mat-dir-button"  class="btn btn-primary">Browse...</button>
+            </div>
+            <div class="form-group">
+                <label for="open-save-folder-container">New data generation folder: </label>
+                <br>
+                <input type="text" id="save-dir" name='save_dir' style="width:85%"></input>
+                <button type="button" id="save-dir-button" class="btn btn-primary">Browse...</button>
+            </div>
+            <div class="form-group">
+                <a type="button" href="matrix_test/run" class="btn btn-primary">Start test</a>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    $(document).ready(function(){
+        // Initialise socketio with a namespace called "main"
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+
+        $('#save-dir-button').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('open_save_dialog');
+            return false;
+        })
+
+        socket.on('save-dialog-resp', function(msg) {
+            // Set form test to filepath returned by dialog
+            document.getElementById("save-dir").value = msg.data
+        });
+
+        $('#mat-dir-button').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('open_mat_dialog');
+            return false;
+        })
+
+        socket.on('mat-dialog-resp', function(msg) {
+            // Set form test to filepath returned by dialog
+            document.getElementById("mat-dir").value = msg.data
+        });
+    });
+</script>
+{% endblock %}
