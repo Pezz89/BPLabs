@@ -52,7 +52,6 @@
         socket.on('mat-processing-status', function(msg) {
             console.log(msg.data)
             if(msg.data) {
-                // Update width of progress bar
                 $('#main-div').find('input, textarea, button, select').attr('disabled','disabled');
             }
         });

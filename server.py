@@ -128,9 +128,78 @@ class StimGenThread(Thread):
         socketio.emit('processing-complete', {'data': ''}, namespace='/main')
 
 
+class MatTestThread(Thread):
+    '''
+    Thread for running server side matrix test operations
+    '''
+    def __init__(self, socketio):
+        super(MatTestThread, self).__init__()
+        self.newResp = False
+        self.foundSRT = False
+        self.pageLoaded = False
+        self.response = ['','','','','']
+        self.socketio = socketio
+        self.socketio.on_event('submit_mat_response', self.submitMatResponse, namespace='/main')
+        self.socketio.on_event('mat_page_loaded', self.setPageLoaded, namespace='/main')
+
+    def waitForResponse(self):
+        while not self.newResp:
+            time.sleep(0.75)
+        return
+
+    def waitForPageLoad(self):
+        while not self.pageLoaded:
+            time.sleep(0.75)
+        return
+
+
+    def testLoop(self):
+        '''
+        An example process
+        '''
+        self.waitForPageLoad()
+        while not self.foundSRT:
+            self.playStimulus()
+            self.waitForResponse()
+        #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
+
+    def playStimulus(self):
+        self.newResp = False
+        socketio.emit("mat_stim_playing", namespace="/main")
+        print("Stim started...")
+        time.sleep(7)
+        socketio.emit("mat_stim_done", namespace="/main")
+        print("stim played")
+
+
+    def setPageLoaded(self):
+        self.pageLoaded = True
+
+
+    def submitMatResponse(self, msg):
+        '''
+        '''
+        self.response = msg['resp']
+        self.newResp = True
+
+
+    def run(self):
+        '''
+        This function is called when the thread starts
+        '''
+        self.testLoop()
+        socketio.emit('processing-complete', {'data': ''}, namespace='/main')
+
 @socketio.on('start_mat_test', namespace='/main')
 def start_mat_test():
+    '''
+    Relay test start message to participant view
+    '''
     socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
+
+    global matThread
+    thread = MatTestThread(socketio)
+    thread.start()
 
 @socketio.on('run_mat_stim_gen', namespace='/main')
 def generateStim(msg):
@@ -148,11 +217,6 @@ def generateStim(msg):
     thread.start()
 
 
-@socketio.on('submit_mat_response', namespace='/main')
-def submitMatResponse(msg):
-    '''
-    '''
-    pdb.set_trace()
 
 @socketio.on('check-mat-processing-status', namespace='/main')
 def checkMatProcessingStatus():
@@ -176,6 +240,7 @@ def openSaveDialog():
     # Send message with selected directory to the GUI
     socketio.emit('save-dialog-resp', {'data': directory}, namespace='/main')
 
+
 @socketio.on('open_mat_dialog', namespace='/main')
 def openMatDialog():
     # Open a file dialog interface for selecting a directory
@@ -188,13 +253,16 @@ def openMatDialog():
     # Send message with selected directory to the GUI
     socketio.emit('mat-dialog-resp', {'data': directory}, namespace='/main')
 
+
 @server.route('/click_stim')
 def clickStim():
     return render_template("click_stim.html")
 
+
 @server.route('/da_stim')
 def daStim():
     return render_template("da_stim.html")
+
 
 def run_server():
     '''
