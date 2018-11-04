@@ -28,6 +28,12 @@ def url_ok(url, port):
         logger.exception("Server not started")
         return False
 
+def create_new_window():
+    webview.create_window("Participant view",
+                          "http://127.0.0.1:23948/participant_home",
+                          width=1000, height=700, min_size=(1000, 500), debug=True)
+
+
 if __name__ == '__main__':
     logger.debug("Starting server")
     # Run server in seperate thread
@@ -41,7 +47,13 @@ if __name__ == '__main__':
         sleep(0.1)
 
     logger.debug("Server started")
+
+    # Create clinician view
+    t2 = Thread(target=create_new_window)
+    t2.start()
+
     # Create browser window for user interaction with GUI
     webview.create_window("BPLabs",
                           "http://127.0.0.1:23948/home",
                           width=1000, height=700, min_size=(1000, 500), debug=True)
+

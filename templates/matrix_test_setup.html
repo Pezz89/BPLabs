@@ -16,7 +16,7 @@
                 <button type="button" id="save-dir-button" class="btn btn-primary">Browse...</button>
             </div>
             <div class="form-group">
-                <a type="button" href="matrix_test/run" class="btn btn-primary">Start test</a>
+                <a type="button" id="submit" href="matrix_test/run" class="btn btn-primary">Start test</a>
             </div>
         </form>
     </div>
@@ -25,6 +25,12 @@
     $(document).ready(function(){
         // Initialise socketio with a namespace called "main"
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+
+        $('#submit').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('start_mat_test');
+            return false;
+        })
 
         $('#save-dir-button').click(function(event) {
             // Send message to call stimulus generation function in Python

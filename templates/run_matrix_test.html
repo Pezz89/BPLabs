@@ -63,7 +63,7 @@
         <button type="button" href="#" id="mat-4" class="Btn Btn-outline-secondary mat-button">beds</button>
     </div>
     <div class="mat_submit">
-        <button type="button" href="#" class="Btn Btn-primary">Submit</button>
+        <button type="button" href="#" id="mat-submit" class="Btn Btn-primary">Submit</button>
     </div>
     <script>
 
@@ -89,26 +89,15 @@
             return false;
         });
 
-        $('#save-dir-button').click(function(event) {
-            // Send message to call stimulus generation function in Python
-            socket.emit('open_save_dialog');
-            return false;
-        })
-
-        socket.on('save-dialog-resp', function(msg) {
-            // Set form test to filepath returned by dialog
-            document.getElementById("save-dir").value = msg.data
-        });
-
-        $('#mat-dir-button').click(function(event) {
-            // Send message to call stimulus generation function in Python
-            socket.emit('open_mat_dialog');
-            return false;
-        })
-
-        socket.on('mat-dialog-resp', function(msg) {
-            // Set form test to filepath returned by dialog
-            document.getElementById("mat-dir").value = msg.data
+        $('#mat-submit').click(function(event) {
+            if(choice.includes('')) {
+                alert("Please select a word from each column");
+                return false;
+            }
+            $('.mat-button').removeClass("active");
+            socket.emit('submit_mat_response', {
+                resp: choice
+            });
         });
     });
     </script>

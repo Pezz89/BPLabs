@@ -3,6 +3,7 @@
 import os
 from flask import Flask, url_for, render_template, jsonify, request, make_response, g
 from flask_socketio import emit
+import pdb
 
 import webview
 import webbrowser
@@ -55,14 +56,27 @@ def fullscreen():
     webview.toggle_fullscreen()
     return jsonify({})
 
+@server.route('/participant_home')
+def participant_homepage():
+    title = "Welcome"
+    paragraph = [
+        "Please wait while the experimenter sets up the test..."
+    ]
+
+    try:
+        return render_template("participant_home.html", title = title, paragraph=paragraph)
+    except Exception as e:
+        return str(e)
+
 @server.route('/home')
 def homepage():
     title = "Welcome"
     paragraph = [
+        "This is the clinician view. Use the dropdown menus to access controls "
+        "and feedback for the various tests available.",
         "This web app was developed for the generation of stimulus and "
         "running of experiments for the PhD project \"Predicting speech "
-        "in noise performance using evoked responses\".",
-        "Use the drop down menus to access the various modules of this app."
+        "in noise performance using evoked responses\"."
     ]
 
     try:
@@ -114,6 +128,10 @@ class StimGenThread(Thread):
         socketio.emit('processing-complete', {'data': ''}, namespace='/main')
 
 
+@socketio.on('start_mat_test', namespace='/main')
+def start_mat_test():
+    socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
+
 @socketio.on('run_mat_stim_gen', namespace='/main')
 def generateStim(msg):
     '''
@@ -128,6 +146,13 @@ def generateStim(msg):
     save_dir = msg['save_dir']
     thread = StimGenThread(n_part, snr_len, snr_num, mat_dir, save_dir, socketio=socketio)
     thread.start()
+
+
+@socketio.on('submit_mat_response', namespace='/main')
+def submitMatResponse(msg):
+    '''
+    '''
+    pdb.set_trace()
 
 @socketio.on('check-mat-processing-status', namespace='/main')
 def checkMatProcessingStatus():
