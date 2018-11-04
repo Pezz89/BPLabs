@@ -79,7 +79,7 @@ def matrix_test():
 def run_matrix_test():
     return render_template("run_matrix_test.html")
 
-@server.route('/mat_dec_stim')
+@server.route('/matrix_test/stimulus_generation')
 def matDecStim():
     return render_template("matrix_decode_stim.html")
 

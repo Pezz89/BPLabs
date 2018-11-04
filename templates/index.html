@@ -9,26 +9,30 @@
 
     <style>
         .mat_grid > button {
-                display: block;
-                text-decoration: none;
-                text-align: center;
-                align-items: stretch;
-                border-radius: 0px;
-                vertical-align: middle;
+            display: block;
+            text-decoration: none;
+            text-align: center;
+            align-items: stretch;
+            border-radius: 0px;
+            vertical-align: middle;
+        }
 
+        .mat_submit > button {
+            display: block;
+            text-decoration: none;
+            text-align: center;
+            align-items: stretch;
+            border-radius: 0px;
+            width: 100%;
+            height: 10%;
         }
 
         .mat_grid {
             display: grid;
-            justify-content: center;
             align-content: center;
-            grid-template-columns: repeat(10, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             grid-template-rows: repeat(10, 1fr);
-            height: calc(100% - 56px);
-            /*
-            grid-gap: 20px;
-            gap: 20px;
-            */
+            height: calc(90% - 56px);
         }
 
     </style>
@@ -51,7 +55,7 @@
                     Stimulus generation
                 </a>
                 <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                <a class="dropdown-item" href="mat_dec_stim">Matrix decoder stimulus</a>
+                <a class="dropdown-item" href="/matrix_test/stimulus_generation">Matrix decoder stimulus</a>
                 <a class="dropdown-item" href="click_Stim">Click stimulus</a>
                 <a class="dropdown-item" href="da_stim">/da/ stimulus</a>
                 </div>
@@ -63,7 +67,7 @@
                 <div class="dropdown-menu" aria-labelledby="navbarDropdown">
                 <a class="dropdown-item" href="#">PTA</a>
                 <a class="dropdown-item" href="#">Tympanometry</a>
-                <a class="dropdown-item" href="matrix_test">Matrix Test</a>
+                <a class="dropdown-item" href="/matrix_test">Matrix Test</a>
                 <a class="dropdown-item" href="#">EEG recording</a>
                 </div>
             </li>
