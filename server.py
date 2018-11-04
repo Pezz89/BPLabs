@@ -138,14 +138,17 @@ class MatTestThread(Thread):
         self.foundSRT = False
         self.pageLoaded = False
         self.response = ['','','','','']
+        self.currentSRT = 0.0
         self.socketio = socketio
         self.socketio.on_event('submit_mat_response', self.submitMatResponse, namespace='/main')
         self.socketio.on_event('mat_page_loaded', self.setPageLoaded, namespace='/main')
+
 
     def waitForResponse(self):
         while not self.newResp:
             time.sleep(0.75)
         return
+
 
     def waitForPageLoad(self):
         while not self.pageLoaded:
@@ -163,13 +166,15 @@ class MatTestThread(Thread):
             self.waitForResponse()
         #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
 
+
     def playStimulus(self):
         self.newResp = False
         socketio.emit("mat_stim_playing", namespace="/main")
-        print("Stim started...")
-        time.sleep(7)
+        # Load speech
+        # Load noise
+        # Mix speech and noise at set SNR
+        # Play audio
         socketio.emit("mat_stim_done", namespace="/main")
-        print("stim played")
 
 
     def setPageLoaded(self):
@@ -190,6 +195,7 @@ class MatTestThread(Thread):
         self.testLoop()
         socketio.emit('processing-complete', {'data': ''}, namespace='/main')
 
+
 @socketio.on('start_mat_test', namespace='/main')
 def start_mat_test():
     '''
@@ -200,6 +206,7 @@ def start_mat_test():
     global matThread
     thread = MatTestThread(socketio)
     thread.start()
+
 
 @socketio.on('run_mat_stim_gen', namespace='/main')
 def generateStim(msg):
