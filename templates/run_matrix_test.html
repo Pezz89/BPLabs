@@ -74,6 +74,7 @@
         var choice = Array(5).fill('');
         $('.mat-button').click(function(event) {
             choice[this.id.slice(-1)] = $(this).text();
+            $('.mat-button#'+this.id).not(this).removeClass("active");
             $(this).toggleClass("active");
             console.log(choice);
             /*
