@@ -87,6 +87,8 @@ def gen_audio_stim(MatrixDir, OutDir, indexes):
         os.makedirs(OutDir)
     wavFiles = globDir(MatrixDir, '*.wav')
     wavFileMatrix = organiseWavs(wavFiles)
+    wavDir = os.path.join(OutDir, "wav")
+    dir_must_exist(wavDir)
     files = []
     n = 0
     o = 0
@@ -97,7 +99,7 @@ def gen_audio_stim(MatrixDir, OutDir, indexes):
         for ind in sentenceList:
             o += 1
             y, wavInfo, partnames = synthesize_trial(wavFileMatrix, ind)
-            fileName = os.path.join(OutDir, 'Trial_{0:02d}_{1:02d}.wav'.format(n, o))
+            fileName = os.path.join(wavDir, 'Trial_{0:02d}_{1:02d}.wav'.format(n, o))
             print("Generating: " + fileName)
             sndio.write(fileName, y, **wavInfo)
             files[-1].append(fileName)
@@ -119,16 +121,15 @@ def gen_indexes():
         y[i] = x.copy()
     return y
 
-def gen_rms(files):
+def gen_rms(files, OutDir):
     rmsFiles = []
     for sentenceList in files:
         for file in sentenceList:
             head, tail = os.path.split(file)
             tail = os.path.splitext(tail)[0]
             tail = tail + "_rms.npy"
-            head = os.path.join(head, "rms")
-            dir_must_exist(head)
-            rmsFilepath = os.path.join(head, tail)
+            dir_must_exist(OutDir)
+            rmsFilepath = os.path.join(OutDir, tail)
             print("Generating: "+rmsFilepath)
             y, fs, _ = sndio.read(file)
             y_rms = calc_rms(y, round(0.02*fs))
@@ -196,16 +197,19 @@ if __name__ == "__main__":
                         default='./speech_components',
                         help='Matrix test speech data location')
     parser.add_argument('--OutDir', type=PathType(exists=None, type='dir'),
-                        default='./out_trials', help='Output directory')
+                        default='./noise_gen', help='Output directory')
     parser.add_argument('--SkipRMS', action='store_true')
     args = {k:v for k,v in vars(parser.parse_args()).items() if v is not None}
 
+    rmsDir = os.path.join(args['OutDir'], "rms")
     if not args['SkipRMS']:
         indexes = gen_indexes()
         wavfiles = gen_audio_stim(args['MatrixDir'], args['OutDir'], indexes)
-        rmsFiles = gen_rms(wavfiles)
+        rmsFiles = gen_rms(wavfiles, rmsDir)
     else:
-        wavFiles = globDir(args['OutDir'], '*.wav')
+        wavDir = os.path.join(args['OutDir'], "wav")
+        dir_must_exist(wavDir)
+        wavFiles = globDir(wavDir, '*.wav')
         wf = []
         for listInd in range(50):
             wf.append([])
@@ -213,7 +217,7 @@ if __name__ == "__main__":
                 wf[listInd].append(wavFiles[listInd*10+sentenceInd])
         wavFiles = wf
 
-        rmsFiles = globDir(os.path.join(args['OutDir'], "rms"), '*.npy')
+        rmsFiles = globDir(rmsDir, '*.npy')
     silences = detect_silences(rmsFiles, 44100)
     b = calc_spectrum(wavFiles, silences)
     y = gen_noise(args['OutDir'], b, 44100)
