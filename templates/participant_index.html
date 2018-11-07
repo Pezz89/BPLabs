@@ -1,0 +1,76 @@
+<html>
+<link rel="stylesheet" media="screen" href = "{{ url_for('static', filename='bootstrap.min.css') }}">
+<meta name="viewport" content = "width=device-width, initial-scale=1.0">
+<head>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script src="http://code.highcharts.com/highcharts.js"></script>
+    <script type="text/javascript" src = "/static/bootstrap.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+
+    <style>
+        .mat_grid > button {
+            display: block;
+            text-decoration: none;
+            text-align: center;
+            align-items: stretch;
+            border-radius: 0px;
+            vertical-align: middle;
+        }
+
+        .mat_submit > button {
+            display: block;
+            text-decoration: none;
+            text-align: center;
+            align-items: stretch;
+            border-radius: 0px;
+            width: 100%;
+            height: 10%;
+        }
+
+        .mat_grid {
+            display: grid;
+            align-content: center;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(10, 1fr);
+            height: calc(90% - 56px);
+        }
+
+    </style>
+</head>
+
+<body class = "body">
+    <nav id="main-nav" class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand">BPLabs v0.1</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+            </ul>
+        </div>
+    </nav>
+    {% block content %}{% endblock %}
+
+    <script>
+
+    $(document).ready(function(){
+        // Initialise socketio with a namespace called "main"
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+
+        // Catch progress bar update messages
+        socket.on('update-progress', function(msg) {
+            // Update width of progress bar
+            $('#progress').css("width", msg.data);
+        });
+
+        // Catch message when asynchronous process is complete
+        socket.on('processing-complete', function(msg) {
+            // Re-enable all inputs
+            $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
+            alert("Matrix stimulus processing complete!")
+        });
+    });
+    </script>
+</body>
+
+</html>

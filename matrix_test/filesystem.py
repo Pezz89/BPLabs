@@ -38,6 +38,7 @@ def globDir(directory, pattern):
     for item in absoluteFilePaths(directory):
         if bool(speech_file_pattern.match(os.path.basename(item))):
             filepaths.append(item)
+    filepaths = natsorted(filepaths)
     return filepaths
 
 def organiseWavs(wavFiles):

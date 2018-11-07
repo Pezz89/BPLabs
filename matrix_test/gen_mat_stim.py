@@ -12,15 +12,14 @@ import numpy as np
 import csv
 from natsort import natsorted
 from collections import namedtuple
-import pysndfile
-from pysndfile import PySndfile
+from pysndfile import PySndfile, sndio
 import matplotlib.pyplot as plt
 
 from pathops import dir_must_exist
 try:
-    from signalops import rolling_window_lastaxis, block_lfilter
+    from signalops import rolling_window_lastaxis, calc_rms
 except ImportError:
-    from .signalops import rolling_window_lastaxis, block_lfilter
+    from .signalops import rolling_window_lastaxis, block_lfilter, calc_rms
 
 import scipy.signal as sgnl
 from scipy.stats import pearsonr
@@ -36,6 +35,25 @@ try:
     from filesystem import globDir, organiseWavs, prepareOutDir
 except ImportError:
     from .filesystem import globDir, organiseWavs, prepareOutDir
+
+
+def block_lfilter_wav(b, a, x, outfile, fmt, fs, blocksize=8192):
+    '''
+    Filter 1D signal in blocks. For use with large signals
+    '''
+    new_state = np.zeros(b.size-1)
+    sndfile = PySndfile(outfile, 'w', fmt, 1, fs)
+    i = 0
+    while i < x.size:
+        print("Filtering {0} to {1} of {2}".format(i, i+blocksize, x.size))
+        if i+blocksize > x.size:
+            y, new_state = sgnl.lfilter(b,a,x[i:-1], zi=new_state)
+            sndfile.write_frames(y)
+        else:
+            y, new_state = sgnl.lfilter(b,a,x[i:i+blocksize], zi=new_state)
+            sndfile.write_frames(y)
+        i += blocksize
+    return sndfile
 
 
 def synthesize_trial(wavFileMatrix, indexes):
@@ -81,7 +99,7 @@ def gen_audio_stim(MatrixDir, OutDir, indexes):
             y, wavInfo, partnames = synthesize_trial(wavFileMatrix, ind)
             fileName = os.path.join(OutDir, 'Trial_{0:02d}_{1:02d}.wav'.format(n, o))
             print("Generating: " + fileName)
-            pysndfile.sndio.write(fileName, y, **wavInfo)
+            sndio.write(fileName, y, **wavInfo)
             files[-1].append(fileName)
 
     return files
@@ -101,6 +119,73 @@ def gen_indexes():
         y[i] = x.copy()
     return y
 
+def gen_rms(files):
+    rmsFiles = []
+    for sentenceList in files:
+        for file in sentenceList:
+            head, tail = os.path.split(file)
+            tail = os.path.splitext(tail)[0]
+            tail = tail + "_rms.npy"
+            head = os.path.join(head, "rms")
+            dir_must_exist(head)
+            rmsFilepath = os.path.join(head, tail)
+            print("Generating: "+rmsFilepath)
+            y, fs, _ = sndio.read(file)
+            y_rms = calc_rms(y, round(0.02*fs))
+            np.save(rmsFilepath, y_rms)
+            rmsFiles.append(rmsFilepath)
+    return rmsFiles
+
+def detect_silences(rmsFiles, fs):
+    silences = []
+    for envelopeFile in rmsFiles:
+        env = np.load(envelopeFile)
+        silence = env < 0.001
+        # Get segment start end indexes for all silences in envelope
+        silentSegs = np.where(np.concatenate(([silence[0]],silence[:-1]!=silence[1:],[True])))[0].reshape(-1, 2)
+        validSegs = np.diff(silentSegs) > 0.002*fs
+        silences.append(silentSegs[np.repeat(validSegs, 2, axis=1)].reshape(-1, 2))
+    return silences
+
+
+def calc_spectrum(files, silences, fs=44100, plot=False):
+    window = 4096
+    sentenceLen = []
+    sentenceFFT = []
+
+    for ind, sentenceList in enumerate(files):
+        for ind2, file in enumerate(sentenceList):
+            x, fs, _ = sndio.read(file)
+            f, t, Zxx = sgnl.stft(x, window=np.ones(window), nperseg=window, noverlap=0)
+            sil = silences[ind*10+ind2]
+            sTemp = np.zeros((sil.shape[0], t.size), dtype=bool)
+            for ind3, s in enumerate(sil):
+                sTemp[ind3, :] = np.logical_and(t > s[0], t < s[1])
+            invalidFFT = np.any(sTemp, axis=0)
+            sentenceFFT.append(np.mean(np.abs(Zxx[:, ~np.any(sTemp, axis=0)]), axis=1))
+            sentenceLen.append(x.size)
+    sentenceFFT = np.array(sentenceFFT)
+    sentenceLen = np.array([sentenceLen]).T
+    sentenceLen = sentenceLen / sentenceLen.max()
+    grandAvgFFT = np.mean(sentenceFFT * sentenceLen, axis=0)
+    print("Fitting filter...")
+    b = sgnl.firls(2049, np.linspace(0, 1, 2049)[1:], grandAvgFFT[1:])
+    if plot:
+        plt.semilogy(np.abs(sgnl.freqz(b)[1]))
+        plt.plot(np.linspace(0, 512, 2049), grandAvgFFT)
+        plt.show()
+    return b
+
+
+def gen_noise(OutDir, b, fs):
+    # Generate 10 minutes of white noise
+    x = np.random.uniform(-1., 1., int(fs*60.*10.))
+    noiseDir = os.path.join(OutDir, 'noise')
+    dir_must_exist(noiseDir)
+    y = block_lfilter_wav(b, [1.0], x, os.path.join(noiseDir, 'noise.wav'), 65538, 44100)
+    return y
+
+
 if __name__ == "__main__":
     from pathtype import PathType
     # Create commandline interface
@@ -112,7 +197,23 @@ if __name__ == "__main__":
                         help='Matrix test speech data location')
     parser.add_argument('--OutDir', type=PathType(exists=None, type='dir'),
                         default='./out_trials', help='Output directory')
+    parser.add_argument('--SkipRMS', action='store_true')
     args = {k:v for k,v in vars(parser.parse_args()).items() if v is not None}
 
-    indexes = gen_indexes()
-    files = gen_audio_stim(args['MatrixDir'], args['OutDir'], indexes)
+    if not args['SkipRMS']:
+        indexes = gen_indexes()
+        wavfiles = gen_audio_stim(args['MatrixDir'], args['OutDir'], indexes)
+        rmsFiles = gen_rms(wavfiles)
+    else:
+        wavFiles = globDir(args['OutDir'], '*.wav')
+        wf = []
+        for listInd in range(50):
+            wf.append([])
+            for sentenceInd in range(10):
+                wf[listInd].append(wavFiles[listInd*10+sentenceInd])
+        wavFiles = wf
+
+        rmsFiles = globDir(os.path.join(args['OutDir'], "rms"), '*.npy')
+    silences = detect_silences(rmsFiles, 44100)
+    b = calc_spectrum(wavFiles, silences)
+    y = gen_noise(args['OutDir'], b, 44100)
