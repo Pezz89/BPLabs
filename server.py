@@ -5,13 +5,18 @@ from flask import Flask, url_for, render_template, jsonify, request, make_respon
 from flask_socketio import emit
 import pdb
 
+import sounddevice as sd
 import webview
 import webbrowser
 import app
 import time
 from threading import Thread, Event
+import numpy as np
+import random
 
+from pysndfile import sndio
 from app import generate_matrix_stimulus
+from matrix_test.filesystem import globDir, organiseWavs, prepareOutDir
 
 import config
 
@@ -132,7 +137,8 @@ class MatTestThread(Thread):
     '''
     Thread for running server side matrix test operations
     '''
-    def __init__(self, socketio):
+    def __init__(self, noiseFilepath="./matrix_test/stimulus/wav/noise/noise.wav",
+        listFolder="./matrix_test/stimulus/wav/sentence-lists/", socketio=None):
         super(MatTestThread, self).__init__()
         self.newResp = False
         self.foundSRT = False
@@ -142,6 +148,19 @@ class MatTestThread(Thread):
         self.socketio = socketio
         self.socketio.on_event('submit_mat_response', self.submitMatResponse, namespace='/main')
         self.socketio.on_event('mat_page_loaded', self.setPageLoaded, namespace='/main')
+
+        self.loadedLists = []
+        self.noise = None
+        self.lists = []
+        self.listsRMS = []
+        self.fs = None
+
+        self.currentList = None
+        self.availableSentenceInds = []
+        self.usedLists = []
+
+        self.loadStimulus(listFolder)
+        self.loadNoise(noiseFilepath)
 
 
     def waitForResponse(self):
@@ -170,15 +189,63 @@ class MatTestThread(Thread):
     def playStimulus(self):
         self.newResp = False
         socketio.emit("mat_stim_playing", namespace="/main")
-        # Load speech
-        # Load noise
-        # Mix speech and noise at set SNR
+        y = self.generateTrial(0.0)
+        sd.play(y, self.fs, blocking=True)
         # Play audio
         socketio.emit("mat_stim_done", namespace="/main")
 
+    def preloadStimulus(self, listDir):
+        return
+
+
+    def loadStimulus(self, listDir, n=20, demo=False):
+        lists = next(os.walk(listDir))[1]
+        lists.pop(lists.index("demo"))
+        pop = [lists.index(x) for x in self.loadedLists]
+        for i in sorted(pop, reverse=True):
+            del lists[i]
+        # Randomly select n lists
+        inds = list(range(n))
+        random.shuffle(inds)
+        for ind in inds:
+            listAudiofiles = globDir(os.path.join(listDir, lists[ind]), "*.wav")
+            self.lists.append([])
+            self.listsRMS.append([])
+            for fp in listAudiofiles:
+                x, self.fs, _ = sndio.read(fp)
+                x_rms = np.sqrt(np.mean(x**2))
+                self.lists[-1].append(x)
+                self.listsRMS[-1].append(x_rms)
+        self.currentListInd = random.randint(0, n)
+        self.usedLists.append(self.currentList)
+        self.availableSentenceInds = list(range(len(self.lists[self.currentListInd])))
+        random.shuffle(self.availableSentenceInds)
+
+
+
+    def loadNoise(self, noiseFilepath):
+        x, _, _ = sndio.read(noiseFilepath)
+        self.noise = x
 
     def setPageLoaded(self):
         self.pageLoaded = True
+
+    def generateTrial(self, snr):
+        # Load speech
+        currentSentenceInd = self.availableSentenceInds.pop(0)
+        x = self.lists[self.currentListInd][currentSentenceInd]
+        x_rms = self.listsRMS[self.currentListInd][currentSentenceInd]
+        # Load noise
+        noiseLen = x.size + self.fs
+        start = random.randint(0, self.noise.size-noiseLen)
+        end = start + noiseLen
+        x_noise = self.noise[start:end]
+        set_trace()
+        y = x_noise
+        sigStart = round(self.fs/2.)
+        y[sigStart:sigStart+x.size] = x
+        # Mix speech and noise at set SNR
+        return y
 
 
     def submitMatResponse(self, msg):
@@ -204,7 +271,7 @@ def start_mat_test():
     socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
 
     global matThread
-    thread = MatTestThread(socketio)
+    thread = MatTestThread(socketio=socketio)
     thread.start()
 
 
@@ -269,6 +336,14 @@ def clickStim():
 @server.route('/da_stim')
 def daStim():
     return render_template("da_stim.html")
+
+def set_trace():
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+    log = logging.getLogger('engineio')
+    log.setLevel(logging.ERROR)
+    pdb.set_trace()
 
 
 def run_server():
