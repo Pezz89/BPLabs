@@ -138,6 +138,7 @@ def gen_rms(files, OutDir):
     return rmsFiles
 
 def detect_silences(rmsFiles, fs):
+    print("Detecting silence in wav files...")
     silences = []
     for envelopeFile in rmsFiles:
         env = np.load(envelopeFile)
@@ -154,6 +155,7 @@ def calc_spectrum(files, silences, fs=44100, plot=False):
     sentenceLen = []
     sentenceFFT = []
 
+    print("Calculating LTASS...")
     for ind, sentenceList in enumerate(files):
         for ind2, file in enumerate(sentenceList):
             x, fs, _ = sndio.read(file)
@@ -169,7 +171,7 @@ def calc_spectrum(files, silences, fs=44100, plot=False):
     sentenceLen = np.array([sentenceLen]).T
     sentenceLen = sentenceLen / sentenceLen.max()
     grandAvgFFT = np.mean(sentenceFFT * sentenceLen, axis=0)
-    print("Fitting filter...")
+    print("Fitting filter to LTASS...")
     b = sgnl.firls(2049, np.linspace(0, 1, 2049)[1:], grandAvgFFT[1:])
     if plot:
         plt.semilogy(np.abs(sgnl.freqz(b)[1]))
@@ -179,6 +181,7 @@ def calc_spectrum(files, silences, fs=44100, plot=False):
 
 
 def gen_noise(OutDir, b, fs):
+    print("Generating noise...")
     # Generate 10 minutes of white noise
     x = np.random.uniform(-1., 1., int(fs*60.*10.))
     noiseDir = os.path.join(OutDir, 'noise')
@@ -204,7 +207,7 @@ if __name__ == "__main__":
     rmsDir = os.path.join(args['OutDir'], "rms")
     if not args['SkipRMS']:
         indexes = gen_indexes()
-        wavfiles = gen_audio_stim(args['MatrixDir'], args['OutDir'], indexes)
+        wavFiles = gen_audio_stim(args['MatrixDir'], args['OutDir'], indexes)
         rmsFiles = gen_rms(wavfiles, rmsDir)
     else:
         wavDir = os.path.join(args['OutDir'], "wav")
