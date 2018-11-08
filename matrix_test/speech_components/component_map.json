@@ -1,0 +1,17 @@
+{
+	"a": ["PETER", "KATHY", "LUCY", "ALAN", "RACHEL", "BARRY", "STEVEN",
+		"THOMAS", "HANNAH", "NINA"
+	],
+	"b": ["GOT", "SEES", "BOUGHT", "GIVES", "SOLD", "LIKES", "HAS", "KEPT",
+		"WINS", "WANTS"
+	],
+	"c": ["THREE", "NINE", "FIVE", "EIGHT", "FOUR", "SIX", "TWO", "TEN",
+		"TWELVE", "SOME"
+	],
+	"d": ["LARGE", "SMALL", "OLD", "DARK", "THIN", "GREEN", "CHEAP", "PINK",
+		"RED", "BIG"
+	],
+	"e": ["DESKS", "CHAIRS", "SHOES", "TOYS", "SPOONS", "MUGS", "SHIPS",
+		"RINGS", "TINS", "BEDS"
+	]
+}
