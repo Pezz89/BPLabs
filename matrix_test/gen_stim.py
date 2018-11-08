@@ -69,22 +69,20 @@ def generate_audio_stimulus(MatrixDir, OutDir, indexes, socketio=None):
 
     wav_dir = os.path.join(args['OutDir'], "wav")
     dir_must_exist(wav_dir)
-    sentence_dir = os.path.join(wav_dir, "sentence_lists")
+    sentence_dir = os.path.join(wav_dir, "sentence-lists")
     dir_must_exist(sentence_dir)
-    with open(os.path.join(OutDir, 'stim_parts.csv'), 'w') as csvfile:
-        partwriter = csv.writer(csvfile)
-        # Synthesize audio for each trial using generated word choices
-        l = 0
-        sentence_lists = {}
-        for key in indexes.keys():
-            files = []
-            list_dir = os.path.join(sentence_dir, key)
-            dir_must_exist(list_dir)
+    # Synthesize audio for each trial using generated word choices
+    sentence_lists = {}
+    for key in indexes.keys():
+        files = []
+        list_dir = os.path.join(sentence_dir, key)
+        dir_must_exist(list_dir)
+        with open(os.path.join(list_dir, 'stim_parts.csv'), 'w') as csvfile:
+            partwriter = csv.writer(csvfile)
             for sentence_ind, component_inds in enumerate(indexes[key]):
                 if socketio:
                     percent = (l / Length)*100.
                     socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
-                #print("Generating Trial_{0:05d}".format(n))
                 y, wavInfo, partnames = synthesize_trial(wavFileMatrix, component_inds)
                 partwriter.writerow(partnames)
                 file_name = os.path.join(list_dir, 'Trial_{0:05d}.wav'.format(sentence_ind+1))
@@ -92,7 +90,7 @@ def generate_audio_stimulus(MatrixDir, OutDir, indexes, socketio=None):
                 files.append(file_name)
 
             sentence_lists[key] = np.array(files)
-    return sentence_ind
+    return sentence_lists
 
 
 
@@ -130,7 +128,7 @@ if __name__ == "__main__":
                         default='./speech_components',
                         help='Matrix test speech data location')
     parser.add_argument('--OutDir', type=PathType(exists=None, type='dir'),
-                        default='./sentence_list_gen', help='Output directory')
+                        default='./stimulus', help='Output directory')
     parser.add_argument('--ListDir', type=PathType(exists=None, type='dir'),
                         default='./lists', help='Output directory')
 

@@ -89,6 +89,8 @@ def gen_audio_stim(MatrixDir, OutDir, indexes):
     wavFileMatrix = organiseWavs(wavFiles)
     wavDir = os.path.join(OutDir, "wav")
     dir_must_exist(wavDir)
+    wavDir = os.path.join(wavDir, "noise-sentences")
+    dir_must_exist(wavDir)
     files = []
     n = 0
     o = 0
@@ -184,7 +186,9 @@ def gen_noise(OutDir, b, fs):
     print("Generating noise...")
     # Generate 10 minutes of white noise
     x = np.random.uniform(-1., 1., int(fs*60.*10.))
-    noiseDir = os.path.join(OutDir, 'noise')
+    noiseDir = os.path.join(OutDir, 'wav')
+    dir_must_exist(noiseDir)
+    noiseDir = os.path.join(noiseDir, 'noise')
     dir_must_exist(noiseDir)
     y = block_lfilter_wav(b, [1.0], x, os.path.join(noiseDir, 'noise.wav'), 65538, 44100)
     return y
@@ -200,7 +204,7 @@ if __name__ == "__main__":
                         default='./speech_components',
                         help='Matrix test speech data location')
     parser.add_argument('--OutDir', type=PathType(exists=None, type='dir'),
-                        default='./noise_gen', help='Output directory')
+                        default='./stimulus', help='Output directory')
     parser.add_argument('--SkipRMS', action='store_true')
     args = {k:v for k,v in vars(parser.parse_args()).items() if v is not None}
 
@@ -208,7 +212,7 @@ if __name__ == "__main__":
     if not args['SkipRMS']:
         indexes = gen_indexes()
         wavFiles = gen_audio_stim(args['MatrixDir'], args['OutDir'], indexes)
-        rmsFiles = gen_rms(wavfiles, rmsDir)
+        rmsFiles = gen_rms(wavFiles, rmsDir)
     else:
         wavDir = os.path.join(args['OutDir'], "wav")
         dir_must_exist(wavDir)
