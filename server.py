@@ -151,6 +151,7 @@ class MatTestThread(Thread):
 
         self.loadedLists = []
         self.noise = None
+        self.noise_rms = None
         self.lists = []
         self.listsRMS = []
         self.fs = None
@@ -190,8 +191,8 @@ class MatTestThread(Thread):
         self.newResp = False
         socketio.emit("mat_stim_playing", namespace="/main")
         y = self.generateTrial(0.0)
-        sd.play(y, self.fs, blocking=True)
         # Play audio
+        sd.play(y, self.fs, blocking=True)
         socketio.emit("mat_stim_done", namespace="/main")
 
     def preloadStimulus(self, listDir):
@@ -216,9 +217,13 @@ class MatTestThread(Thread):
                 x_rms = np.sqrt(np.mean(x**2))
                 self.lists[-1].append(x)
                 self.listsRMS[-1].append(x_rms)
-        self.currentListInd = random.randint(0, n)
-        self.usedLists.append(self.currentList)
-        self.availableSentenceInds = list(range(len(self.lists[self.currentListInd])))
+
+        zipShuffle = list(zip(self.lists, self.listsRMS))
+        random.shuffle(zipShuffle)
+        self.lists, self.listsRMS = zip(*zipShuffle)
+        self.lists = list(self.lists)
+        self.listsRMS = list(self.listsRMS)
+        self.availableSentenceInds = list(range(len(self.lists[0])))
         random.shuffle(self.availableSentenceInds)
 
 
@@ -226,15 +231,23 @@ class MatTestThread(Thread):
     def loadNoise(self, noiseFilepath):
         x, _, _ = sndio.read(noiseFilepath)
         self.noise = x
+        self.noise_rms = np.sqrt(np.mean(self.noise**2))
+
 
     def setPageLoaded(self):
         self.pageLoaded = True
 
+
     def generateTrial(self, snr):
         # Load speech
+        if not self.availableSentenceInds:
+            del self.lists[0]
+            self.availableSentenceInds = list(range(len(self.lists[0])))
+            random.shuffle(self.availableSentenceInds)
+        # 10^(snr/20.)
         currentSentenceInd = self.availableSentenceInds.pop(0)
-        x = self.lists[self.currentListInd][currentSentenceInd]
-        x_rms = self.listsRMS[self.currentListInd][currentSentenceInd]
+        x = self.lists[0][currentSentenceInd]
+        x_rms = self.listsRMS[0][currentSentenceInd]
         # Load noise
         noiseLen = x.size + self.fs
         start = random.randint(0, self.noise.size-noiseLen)

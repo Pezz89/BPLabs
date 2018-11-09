@@ -77,20 +77,25 @@
         $('.mat-button').click(function(event) {
             choice[this.id.slice(-1)] = $(this).text();
             $('.mat-button#'+this.id).not(this).removeClass("active");
-            $(this).toggleClass("active");
+            $(this).addClass("active");
             console.log(choice);
             return false;
         });
 
         $('#mat-submit').click(function(event) {
+            $('#mat-submit').prop("disabled", true);
             if(choice.includes('')) {
                 alert("Please select a word from each column");
                 return false;
+                $('#mat-submit').prop("disabled", false);
             }
-            $('.mat-button').removeClass("active");
-            socket.emit('submit_mat_response', {
-                resp: choice
-            });
+            else {
+                $('.mat-button').removeClass("active");
+                socket.emit('submit_mat_response', {
+                    resp: choice
+                });
+                choice = Array(5).fill('');
+            }
         });
 
         socket.on('mat_stim_playing', function(msg) {
