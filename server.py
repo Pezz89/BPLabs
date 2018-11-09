@@ -240,10 +240,10 @@ class MatTestThread(Thread):
         start = random.randint(0, self.noise.size-noiseLen)
         end = start + noiseLen
         x_noise = self.noise[start:end]
-        set_trace()
+        #set_trace()
         y = x_noise
         sigStart = round(self.fs/2.)
-        y[sigStart:sigStart+x.size] = x
+        y[sigStart:sigStart+x.size] += x
         # Mix speech and noise at set SNR
         return y
 

@@ -44,16 +44,19 @@ def block_lfilter_wav(b, a, x, outfile, fmt, fs, blocksize=8192):
     new_state = np.zeros(b.size-1)
     sndfile = PySndfile(outfile, 'w', fmt, 1, fs)
     i = 0
+    y_out = np.zeros(x.size)
     while i < x.size:
         print("Filtering {0} to {1} of {2}".format(i, i+blocksize, x.size))
         if i+blocksize > x.size:
             y, new_state = sgnl.lfilter(b,a,x[i:-1], zi=new_state)
             sndfile.write_frames(y)
+            y_out[i:i+y.size] = y
         else:
             y, new_state = sgnl.lfilter(b,a,x[i:i+blocksize], zi=new_state)
             sndfile.write_frames(y)
+            y_out[i:i+y.size] = y
         i += blocksize
-    return sndfile
+    return y_out
 
 
 def synthesize_trial(wavFileMatrix, indexes):
@@ -147,7 +150,7 @@ def detect_silences(rmsFiles, fs):
         silence = env < 0.001
         # Get segment start end indexes for all silences in envelope
         silentSegs = np.where(np.concatenate(([silence[0]],silence[:-1]!=silence[1:],[True])))[0].reshape(-1, 2)
-        validSegs = np.diff(silentSegs) > 0.002*fs
+        validSegs = np.diff(silentSegs) > 0.02*fs
         silences.append(silentSegs[np.repeat(validSegs, 2, axis=1)].reshape(-1, 2))
     return silences
 
@@ -167,12 +170,15 @@ def calc_spectrum(files, silences, fs=44100, plot=False):
             for ind3, s in enumerate(sil):
                 sTemp[ind3, :] = np.logical_and(t > s[0], t < s[1])
             invalidFFT = np.any(sTemp, axis=0)
-            sentenceFFT.append(np.mean(np.abs(Zxx[:, ~np.any(sTemp, axis=0)]), axis=1))
+            sentenceFFT.append(np.abs(Zxx[:, ~np.any(sTemp, axis=0)]))
             sentenceLen.append(x.size)
-    sentenceFFT = np.array(sentenceFFT)
     sentenceLen = np.array([sentenceLen]).T
     sentenceLen = sentenceLen / sentenceLen.max()
-    grandAvgFFT = np.mean(sentenceFFT * sentenceLen, axis=0)
+    sentenceFFT = [x * sentenceLen[i] for i, x in enumerate(sentenceFFT)]
+    sentenceFFT = np.concatenate([x.T for x in sentenceFFT])
+
+    grandAvgFFT = np.mean(sentenceFFT, axis=0)
+    grandAvgFFT = grandAvgFFT / grandAvgFFT.max()
     print("Fitting filter to LTASS...")
     b = sgnl.firls(2049, np.linspace(0, 1, 2049)[1:], grandAvgFFT[1:])
     if plot:
