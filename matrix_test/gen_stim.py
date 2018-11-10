@@ -48,6 +48,7 @@ def gen_indexes(list_dir, speech_dir):
     for list_file in list_files:
         with open(list_file, 'r') as lfile:
             list_inds = []
+            list_strings = []
             for line in lfile:
                 line = line.split()
                 trial_inds = []
@@ -57,9 +58,10 @@ def gen_indexes(list_dir, speech_dir):
                     trial_ind = column_words.index(word.upper())
                     trial_inds.append(trial_ind)
                 list_inds.append(trial_inds)
+                list_strings.append(line)
             head, tail = os.path.split(list_file)
             sl_key = os.path.splitext(tail)[0]
-            sentence_lists[sl_key] = np.array(list_inds)
+            sentence_lists[sl_key] = (np.array(list_inds), list_strings)
     return sentence_lists
 
 def generate_audio_stimulus(MatrixDir, OutDir, indexes, socketio=None):
@@ -79,12 +81,13 @@ def generate_audio_stimulus(MatrixDir, OutDir, indexes, socketio=None):
         dir_must_exist(list_dir)
         with open(os.path.join(list_dir, 'stim_parts.csv'), 'w') as csvfile:
             partwriter = csv.writer(csvfile)
-            for sentence_ind, component_inds in enumerate(indexes[key]):
+            inds, strings = indexes[key]
+            for sentence_ind, (component_inds, component_strings) in enumerate(zip(inds, strings)):
                 if socketio:
                     percent = (l / Length)*100.
                     socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
                 y, wavInfo, partnames = synthesize_trial(wavFileMatrix, component_inds)
-                partwriter.writerow(partnames)
+                partwriter.writerow(component_strings)
                 file_name = os.path.join(list_dir, 'Trial_{0:05d}.wav'.format(sentence_ind+1))
                 sndio.write(file_name, y, **wavInfo)
                 files.append(file_name)

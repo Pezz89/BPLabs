@@ -4,6 +4,7 @@ import os
 from flask import Flask, url_for, render_template, jsonify, request, make_response, g
 from flask_socketio import emit
 import pdb
+import csv
 
 import sounddevice as sd
 import webview
@@ -143,8 +144,6 @@ class MatTestThread(Thread):
         self.newResp = False
         self.foundSRT = False
         self.pageLoaded = False
-        self.response = ['','','','','']
-        self.currentSRT = 0.0
         self.socketio = socketio
         self.socketio.on_event('submit_mat_response', self.submitMatResponse, namespace='/main')
         self.socketio.on_event('mat_page_loaded', self.setPageLoaded, namespace='/main')
@@ -154,7 +153,13 @@ class MatTestThread(Thread):
         self.noise_rms = None
         self.lists = []
         self.listsRMS = []
+        self.listsString = []
         self.fs = None
+
+        self.response = ['','','','','']
+        self.snr = 0.0
+        self.i = 0
+        self.direction = 0
 
         self.currentList = None
         self.availableSentenceInds = []
@@ -162,6 +167,10 @@ class MatTestThread(Thread):
 
         self.loadStimulus(listFolder)
         self.loadNoise(noiseFilepath)
+
+        # Adaptive track parameters
+        self.slope = 0.15
+
 
 
     def waitForResponse(self):
@@ -184,13 +193,36 @@ class MatTestThread(Thread):
         while not self.foundSRT:
             self.playStimulus()
             self.waitForResponse()
+            self.calcSNR()
         #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
+
+
+    def calcSNR(self):
+        '''
+        '''
+        correct = np.array([x == y for x, y in zip(self.currentWords, self.response)])
+        self.nCorrect = np.sum(correct)/correct.size
+        prevSNR = self.snr
+        self.snr -= (((1.5*1.41**-self.i)*(self.nCorrect - 0.5))/self.slope)
+        currentDirection = np.sign(np.diff([prevSNR, self.snr]))
+        if self.direction != currentDirection:
+            if currentDirection == 0:
+                pass
+            else:
+                if self.direction != 0:
+                    self.i += 1
+                self.direction = currentDirection
+
+        if not len(self.lists):
+            self.foundSRT = True
+            return
+        print(self.snr)
 
 
     def playStimulus(self):
         self.newResp = False
         socketio.emit("mat_stim_playing", namespace="/main")
-        y = self.generateTrial(0.0)
+        y = self.generateTrial(self.snr)
         # Play audio
         sd.play(y, self.fs, blocking=True)
         socketio.emit("mat_stim_done", namespace="/main")
@@ -208,21 +240,28 @@ class MatTestThread(Thread):
         # Randomly select n lists
         inds = list(range(n))
         random.shuffle(inds)
+        inds = inds[:3]
         for ind in inds:
             listAudiofiles = globDir(os.path.join(listDir, lists[ind]), "*.wav")
-            self.lists.append([])
-            self.listsRMS.append([])
-            for fp in listAudiofiles:
-                x, self.fs, _ = sndio.read(fp)
-                x_rms = np.sqrt(np.mean(x**2))
-                self.lists[-1].append(x)
-                self.listsRMS[-1].append(x_rms)
+            listCSV = globDir(os.path.join(listDir, lists[ind]), "*.csv")
+            with open(listCSV[0]) as csv_file:
+                csv_reader = csv.reader(csv_file)
+                self.lists.append([])
+                self.listsRMS.append([])
+                self.listsString.append([])
+                for fp, words in zip(listAudiofiles, csv_reader):
+                    x, self.fs, _ = sndio.read(fp)
+                    x_rms = np.sqrt(np.mean(x**2))
+                    self.lists[-1].append(x)
+                    self.listsRMS[-1].append(x_rms)
+                    self.listsString[-1].append(words)
 
-        zipShuffle = list(zip(self.lists, self.listsRMS))
+        zipShuffle = list(zip(self.lists, self.listsRMS, self.listsString))
         random.shuffle(zipShuffle)
-        self.lists, self.listsRMS = zip(*zipShuffle)
+        self.lists, self.listsRMS, self.listsString = zip(*zipShuffle)
         self.lists = list(self.lists)
         self.listsRMS = list(self.listsRMS)
+        self.listsString = list(self.listsString)
         self.availableSentenceInds = list(range(len(self.lists[0])))
         random.shuffle(self.availableSentenceInds)
 
@@ -244,19 +283,22 @@ class MatTestThread(Thread):
             del self.lists[0]
             self.availableSentenceInds = list(range(len(self.lists[0])))
             random.shuffle(self.availableSentenceInds)
-        # 10^(snr/20.)
         currentSentenceInd = self.availableSentenceInds.pop(0)
+        snr_fs = 10**(snr/20)
         x = self.lists[0][currentSentenceInd]
         x_rms = self.listsRMS[0][currentSentenceInd]
+        self.currentWords = self.listsString[0][currentSentenceInd]
         # Load noise
         noiseLen = x.size + self.fs
         start = random.randint(0, self.noise.size-noiseLen)
         end = start + noiseLen
         x_noise = self.noise[start:end]
-        #set_trace()
+        # Calculate RMS of noise
+        noise_rms = np.sqrt(np.mean(x_noise**2))
+        x_noise = x_noise*(x_rms/noise_rms)
         y = x_noise
         sigStart = round(self.fs/2.)
-        y[sigStart:sigStart+x.size] += x
+        y[sigStart:sigStart+x.size] += x*snr_fs
         # Mix speech and noise at set SNR
         return y
 
@@ -264,7 +306,7 @@ class MatTestThread(Thread):
     def submitMatResponse(self, msg):
         '''
         '''
-        self.response = msg['resp']
+        self.response = [x.upper() for x in msg['resp']]
         self.newResp = True
 
 
