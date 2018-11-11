@@ -161,8 +161,8 @@ class MatTestThread(Thread):
         # Attach messages from gui to class methods
         self.socketio.on_event('submit_mat_response', self.submitMatResponse, namespace='/main')
         self.socketio.on_event('mat_page_loaded', self.setPageLoaded, namespace='/main')
-        self.socketio.on_event('mat_save_state', self.saveState, namespace='/main')
-        self.socketio.on_event('mat_load_state', self.loadState, namespace='/main')
+        self.socketio.on_event('save_file_dialog_resp', self.manualSave, namespace='/main')
+        self.socketio.on_event('load_file_dialog_resp', self.loadState, namespace='/main')
 
         self.loadedLists = []
         self.lists = []
@@ -173,6 +173,7 @@ class MatTestThread(Thread):
         self.fs = None
 
         self.response = ['','','','','']
+        self.nCorrect = None
         self.snr = 0.0
         self.direction = 0
         # Record SNRs presented with each trial of the adaptive track
@@ -200,13 +201,13 @@ class MatTestThread(Thread):
 
     def waitForResponse(self):
         while not self.newResp:
-            time.sleep(0.75)
+            socketio.sleep(0.75)
         return
 
 
     def waitForPageLoad(self):
         while not self.pageLoaded:
-            time.sleep(0.75)
+            socketio.sleep(0.75)
         return
 
 
@@ -358,19 +359,27 @@ class MatTestThread(Thread):
         self.newResp = True
 
 
-    def saveState(self):
+    def saveState(self, out="mat_state.pik"):
         toSave = ['listsRMS', 'y', 'currentList', 'foundSRT', 'slope',
                   'response', 'snr', 'snrTrack', 'direction', 'noise_rms', 'i',
                   'currentWords', 'usedLists', 'availableSentenceInds',
                   'newResp', 'trialN', 'listsString', 'noise', 'fs',
                   'nCorrect', 'loadedLists', 'lists']
         saveDict = {k:self.__dict__[k] for k in toSave}
-        with open('mat_state.pik', 'wb') as f:
+        with open(out, 'wb') as f:
             dill.dump(saveDict, f)
 
 
-    def loadState(self):
-        with open('mat_state.pik', 'rb') as f:
+    def manualSave(self, msg):
+        '''
+        Get and store participant response for current trial
+        '''
+        filepath = msg['data']
+        self.saveState(out=filepath)
+
+    def loadState(self, msg):
+        filepath = msg['data']
+        with open(filepath, 'rb') as f:
             self.__dict__.update(dill.load(f))
         self.plotSNR()
 
@@ -391,8 +400,9 @@ def start_mat_test():
     socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
 
     global matThread
-    thread = MatTestThread(socketio=socketio)
-    thread.start()
+    matThread = MatTestThread(socketio=socketio)
+    socketio.start_background_task(matThread.run)
+    #matThread.start()
 
 
 @socketio.on('run_mat_stim_gen', namespace='/main')
@@ -411,7 +421,6 @@ def generateStim(msg):
     thread.start()
 
 
-
 @socketio.on('check-mat-processing-status', namespace='/main')
 def checkMatProcessingStatus():
     global thread
@@ -421,9 +430,34 @@ def checkMatProcessingStatus():
         socketio.emit('mat-processing-status', {'data': False}, namespace='/main')
 
 
+@socketio.on('open_save_file_dialog', namespace='/main')
+def openSaveFileDialog():
+    # Open a file dialog interface for selecting a directory
+    filepath = webview.create_file_dialog(dialog_type=webview.SAVE_DIALOG, file_types=("Python Pickle (*.pik)",))
+    if filepath and len(filepath) > 0:
+        filepath = filepath[0]
+        if isinstance(filepath, bytes):
+            filepath = filepath.decode("utf-8")
+    # TODO: Add filepath checking here...
+    # Send message with selected directory to the GUI
+    socketio.emit('save_file_dialog_resp', {'data': filepath}, namespace='/main', broadcast=True, include_self=True)
+
+
+@socketio.on('open_load_file_dialog', namespace='/main')
+def openSaveFileDialog():
+    # Open a file dialog interface for selecting a directory
+    filepath = webview.create_file_dialog(dialog_type=webview.OPEN_DIALOG, file_types=("Python Pickle (*.pik)",))
+    if filepath and len(filepath) > 0:
+        filepath = filepath[0]
+        if isinstance(filepath, bytes):
+            filepath = filepath.decode("utf-8")
+    # TODO: Add filepath checking here...
+    # Send message with selected directory to the GUI
+    socketio.emit('load_file_dialog_resp', {'data': filepath}, namespace='/main', broadcast=True, include_self=True)
+
 
 @socketio.on('open_save_dialog', namespace='/main')
-def openSaveDialog():
+def openSaveDirDialog():
     # Open a file dialog interface for selecting a directory
     dirs = webview.create_file_dialog(webview.FOLDER_DIALOG)
     if dirs and len(dirs) > 0:
@@ -432,7 +466,7 @@ def openSaveDialog():
             directory = directory.decode("utf-8")
     # TODO: Add filepath checking here...
     # Send message with selected directory to the GUI
-    socketio.emit('save-dialog-resp', {'data': directory}, namespace='/main')
+    socketio.emit('save-file-dialog-resp', {'data': directory}, namespace='/main')
 
 
 @socketio.on('open_mat_dialog', namespace='/main')

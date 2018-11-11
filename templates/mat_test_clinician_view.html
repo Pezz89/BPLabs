@@ -16,14 +16,22 @@ $(document).ready(function(){
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
 
     $('#mat-save').click(function(event) {
-        socket.emit("mat_save_state")
+        socket.emit("open_save_file_dialog")
     });
     $('#mat-load').click(function(event) {
-        socket.emit("mat_load_state")
+        socket.emit("open_load_file_dialog")
     });
     socket.on('mat_plot_ready', function(msg) {
         console.log(msg)
         $('#mat_plot').attr('src', msg.data);
+    });
+    // FIXME: A terrible hack because I can't get the main thread to talk to
+    // the subthread directly using socketio...
+    socket.on('save_file_dialog_resp', function(msg) {
+        socket.emit("save_file_dialog_resp", msg)
+    });
+    socket.on('load_file_dialog_resp', function(msg) {
+        socket.emit("load_file_dialog_resp", msg)
     });
 });
 </script>
