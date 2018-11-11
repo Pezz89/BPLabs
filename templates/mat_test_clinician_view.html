@@ -1,12 +1,14 @@
 {% extends 'index.html' %}
 {% block content %}
 <div>
-    <img id="mat_plot" class="center"/>
-    <div class="btn-toolbar-lg d-flex justify-content-center" role="group">
-        <button type="button" id="mat-repeat" class="btn btn-primary">Repeat audio</button>
-        <button type="button" id="mat-save" class="btn btn-primary">Save test state</button>
-        <button type="button" id="mat-load" class="btn btn-primary">Load test state</button>
-        <button type="button" id="mat-finish" class="btn btn-primary">Finish test</button>
+    <div style="height: 75%;">
+        <img id="mat_plot" class="center" src="/static/default_plot.png"/>
+    </div>
+    <div class="d-flex justify-content-center mt-2" role="group">
+        <button type="button" id="mat-repeat" class="btn btn-primary mx-3">Repeat audio</button>
+        <button type="button" id="mat-save" class="btn btn-primary mx-3">Save test state</button>
+        <button type="button" id="mat-load" class="btn btn-primary mx-3">Load test state</button>
+        <button type="button" id="mat-finish" class="btn btn-primary mx-3">Finish test</button>
     </div>
 </div>
 

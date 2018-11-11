@@ -222,6 +222,7 @@ class MatTestThread(Thread):
             self.playStimulus()
             self.waitForResponse()
             self.calcSNR()
+            self.saveState()
         #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
 
     def plotSNR(self):
