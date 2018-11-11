@@ -15,8 +15,10 @@
                 <input type="text" id="save-dir" name='save_dir' style="width:85%"></input>
                 <button type="button" id="save-dir-button" class="btn btn-primary">Browse...</button>
             </div>
-            <div class="form-group">
-                <button type="button" id="submit" class="btn btn-primary">Start test</button>
+            <div class="form-group d-flex justify-content-center">
+                <button type="button" id="submit" class="btn btn-primary mx-3">Start new test</button>
+                <button type="button" id="load-saved" class="btn btn-primary mx-3">Load saved session</button>
+                <button type="button" id="load-backup" class="btn btn-primary mx-3">Load previous automatic backup</button>
             </div>
         </form>
     </div>
@@ -26,6 +28,16 @@
         // Initialise socketio with a namespace called "main"
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
 
+        $('#load-backup').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('load_mat_backup');
+            return false;
+        })
+        $('#load-saved').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('load_mat_session');
+            return false;
+        })
         $('#submit').click(function(event) {
             // Send message to call stimulus generation function in Python
             socket.emit('start_mat_test');

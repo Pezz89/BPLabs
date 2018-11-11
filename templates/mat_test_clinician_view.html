@@ -7,7 +7,6 @@
     <div class="d-flex justify-content-center mt-2" role="group">
         <button type="button" id="mat-repeat" class="btn btn-primary mx-3">Repeat audio</button>
         <button type="button" id="mat-save" class="btn btn-primary mx-3">Save test state</button>
-        <button type="button" id="mat-load" class="btn btn-primary mx-3">Load test state</button>
         <button type="button" id="mat-finish" class="btn btn-primary mx-3">Finish test</button>
     </div>
 </div>
@@ -19,9 +18,6 @@ $(document).ready(function(){
 
     $('#mat-save').click(function(event) {
         socket.emit("open_save_file_dialog")
-    });
-    $('#mat-load').click(function(event) {
-        socket.emit("open_load_file_dialog")
     });
     socket.on('mat_plot_ready', function(msg) {
         console.log(msg)

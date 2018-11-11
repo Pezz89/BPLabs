@@ -151,7 +151,7 @@ class MatTestThread(Thread):
     '''
     Thread for running server side matrix test operations
     '''
-    def __init__(self, noiseFilepath="./matrix_test/stimulus/wav/noise/noise.wav",
+    def __init__(self, sessionFilepath=None, noiseFilepath="./matrix_test/stimulus/wav/noise/noise.wav",
         listFolder="./matrix_test/stimulus/wav/sentence-lists/", socketio=None):
         super(MatTestThread, self).__init__()
         self.newResp = False
@@ -162,7 +162,7 @@ class MatTestThread(Thread):
         self.socketio.on_event('submit_mat_response', self.submitMatResponse, namespace='/main')
         self.socketio.on_event('mat_page_loaded', self.setPageLoaded, namespace='/main')
         self.socketio.on_event('save_file_dialog_resp', self.manualSave, namespace='/main')
-        self.socketio.on_event('load_file_dialog_resp', self.loadState, namespace='/main')
+        self.socketio.on_event('load_file_dialog_resp', self.loadStateSocketHandle, namespace='/main')
 
         self.loadedLists = []
         self.lists = []
@@ -197,7 +197,8 @@ class MatTestThread(Thread):
 
         # Plotting parameters
         self.img = io.BytesIO()
-
+        if sessionFilepath:
+            self.loadState(sessionFilepath)
 
 
     def waitForResponse(self):
@@ -367,7 +368,7 @@ class MatTestThread(Thread):
     def saveState(self, out="mat_state.pik"):
         toSave = ['listsRMS', 'y', 'currentList', 'foundSRT', 'slope', 'snr',
                   'snrTrack', 'direction', 'noise_rms', 'i', 'currentWords',
-                  'usedLists', 'availableSentenceInds', 'newResp', 'trialN',
+                  'usedLists', 'availableSentenceInds', 'trialN',
                   'listsString', 'noise', 'fs', 'nCorrect', 'loadedLists',
                   'lists']
         saveDict = {k:self.__dict__[k] for k in toSave}
@@ -382,12 +383,15 @@ class MatTestThread(Thread):
         filepath = msg['data']
         self.saveState(out=filepath)
 
-    def loadState(self, msg):
+
+    def loadStateSocketHandle(self, msg):
         filepath = msg['data']
+        self.loadState(filepath)
+
+
+    def loadState(self, filepath):
         with open(filepath, 'rb') as f:
             self.__dict__.update(dill.load(f))
-        self.plotSNR()
-        self.playStimulus()
 
 
     def run(self):
@@ -408,7 +412,35 @@ def start_mat_test():
     global matThread
     matThread = MatTestThread(socketio=socketio)
     socketio.start_background_task(matThread.run)
-    #matThread.start()
+
+
+@socketio.on('load_mat_backup', namespace='/main')
+def start_backup_mat_test():
+    '''
+    Relay test start message to participant view
+    '''
+    socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
+
+    global matThread
+    matThread = MatTestThread(sessionFilepath="./mat_state.pik", socketio=socketio)
+    socketio.start_background_task(matThread.run)
+
+
+@socketio.on('load_mat_session', namespace='/main')
+def start_saved_mat_test():
+    '''
+    Relay test start message to participant view
+    '''
+
+    filepath = webview.create_file_dialog(dialog_type=webview.OPEN_DIALOG, file_types=("Python Pickle (*.pik)",))
+    if filepath and len(filepath) > 0:
+        filepath = filepath[0]
+        if isinstance(filepath, bytes):
+            filepath = filepath.decode("utf-8")
+    socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
+    global matThread
+    matThread = MatTestThread(sessionFilepath=filepath, socketio=socketio)
+    socketio.start_background_task(matThread.run)
 
 
 @socketio.on('run_mat_stim_gen', namespace='/main')
@@ -450,7 +482,7 @@ def openSaveFileDialog():
 
 
 @socketio.on('open_load_file_dialog', namespace='/main')
-def openSaveFileDialog():
+def openLoadFileDialog():
     # Open a file dialog interface for selecting a directory
     filepath = webview.create_file_dialog(dialog_type=webview.OPEN_DIALOG, file_types=("Python Pickle (*.pik)",))
     if filepath and len(filepath) > 0:
