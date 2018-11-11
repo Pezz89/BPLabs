@@ -179,8 +179,9 @@ class MatTestThread(Thread):
         # Record SNRs presented with each trial of the adaptive track
         self.snrTrack = np.empty(30)
         self.snrTrack[:] = np.nan
+        self.snrTrack[0] = 0.0
         # Count number of presented trials
-        self.trialN = 0
+        self.trialN = 1
 
         self.currentList = None
         self.availableSentenceInds = []
@@ -207,7 +208,7 @@ class MatTestThread(Thread):
 
     def waitForPageLoad(self):
         while not self.pageLoaded:
-            socketio.sleep(0.75)
+            socketio.sleep(0.2)
         return
 
 
@@ -226,16 +227,18 @@ class MatTestThread(Thread):
     def plotSNR(self):
         '''
         '''
-        self.snrTrack[self.trialN] = self.snr
         plt.plot(self.snrTrack, 'bo-')
         plt.ylim([20.0, -20.0])
+        plt.xticks(np.arange(30))
+        plt.xlim([-1, self.trialN])
+        plt.xlabel("Trial N")
+        plt.ylabel("SNR (dB)")
         dpi = 300
         plt.savefig(self.img, format='png', figsize=(800/dpi, 800/dpi), dpi=dpi)
         self.img.seek(0)
         plot_url = base64.b64encode(self.img.getvalue()).decode()
         plot_url = "data:image/png;base64,{}".format(plot_url)
         socketio.emit("mat_plot_ready", {'data': plot_url}, namespace="/main")
-        self.trialN += 1
 
     def calcSNR(self):
         '''
@@ -256,7 +259,8 @@ class MatTestThread(Thread):
         if not len(self.lists):
             self.foundSRT = True
             return
-        print(self.snr)
+        self.snrTrack[self.trialN] = self.snr
+        self.trialN += 1
 
 
     def playStimulus(self, replay=False):
@@ -360,11 +364,11 @@ class MatTestThread(Thread):
 
 
     def saveState(self, out="mat_state.pik"):
-        toSave = ['listsRMS', 'y', 'currentList', 'foundSRT', 'slope',
-                  'response', 'snr', 'snrTrack', 'direction', 'noise_rms', 'i',
-                  'currentWords', 'usedLists', 'availableSentenceInds',
-                  'newResp', 'trialN', 'listsString', 'noise', 'fs',
-                  'nCorrect', 'loadedLists', 'lists']
+        toSave = ['listsRMS', 'y', 'currentList', 'foundSRT', 'slope', 'snr',
+                  'snrTrack', 'direction', 'noise_rms', 'i', 'currentWords',
+                  'usedLists', 'availableSentenceInds', 'newResp', 'trialN',
+                  'listsString', 'noise', 'fs', 'nCorrect', 'loadedLists',
+                  'lists']
         saveDict = {k:self.__dict__[k] for k in toSave}
         with open(out, 'wb') as f:
             dill.dump(saveDict, f)
@@ -382,6 +386,7 @@ class MatTestThread(Thread):
         with open(filepath, 'rb') as f:
             self.__dict__.update(dill.load(f))
         self.plotSNR()
+        self.playStimulus()
 
 
     def run(self):
