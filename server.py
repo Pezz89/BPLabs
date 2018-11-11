@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import matplotlib
+matplotlib.use("Agg")
+import seaborn as sns
+sns.set(style="ticks")
+import matplotlib.pyplot as plt
 import os
 from flask import Flask, url_for, render_template, jsonify, request, make_response, g
 from flask_socketio import emit
 import pdb
 import csv
+import io
+import base64
+import dill
 
 import sounddevice as sd
 import webview
@@ -18,6 +26,7 @@ import random
 from pysndfile import sndio
 from app import generate_matrix_stimulus
 from matrix_test.filesystem import globDir, organiseWavs, prepareOutDir
+
 
 import config
 
@@ -99,6 +108,10 @@ def matrix_test():
 def run_matrix_test():
     return render_template("run_matrix_test.html")
 
+@server.route('/matrix_test/control')
+def control_matrix_test():
+    return render_template("mat_test_clinician_view.html")
+
 @server.route('/matrix_test/stimulus_generation')
 def matDecStim():
     return render_template("matrix_decode_stim.html")
@@ -145,31 +158,43 @@ class MatTestThread(Thread):
         self.foundSRT = False
         self.pageLoaded = False
         self.socketio = socketio
+        # Attach messages from gui to class methods
         self.socketio.on_event('submit_mat_response', self.submitMatResponse, namespace='/main')
         self.socketio.on_event('mat_page_loaded', self.setPageLoaded, namespace='/main')
+        self.socketio.on_event('mat_save_state', self.saveState, namespace='/main')
+        self.socketio.on_event('mat_load_state', self.loadState, namespace='/main')
 
         self.loadedLists = []
-        self.noise = None
-        self.noise_rms = None
         self.lists = []
         self.listsRMS = []
         self.listsString = []
+        self.noise = None
+        self.noise_rms = None
         self.fs = None
 
         self.response = ['','','','','']
         self.snr = 0.0
-        self.i = 0
         self.direction = 0
+        # Record SNRs presented with each trial of the adaptive track
+        self.snrTrack = np.empty(30)
+        self.snrTrack[:] = np.nan
+        # Count number of presented trials
+        self.trialN = 0
 
         self.currentList = None
         self.availableSentenceInds = []
         self.usedLists = []
 
+        # Preload audio at start of the test
         self.loadStimulus(listFolder)
         self.loadNoise(noiseFilepath)
 
         # Adaptive track parameters
         self.slope = 0.15
+        self.i = 0
+
+        # Plotting parameters
+        self.img = io.BytesIO()
 
 
 
@@ -187,15 +212,29 @@ class MatTestThread(Thread):
 
     def testLoop(self):
         '''
-        An example process
+        Main loop for iteratively finding the SRT
         '''
         self.waitForPageLoad()
         while not self.foundSRT:
+            self.plotSNR()
             self.playStimulus()
             self.waitForResponse()
             self.calcSNR()
         #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
 
+    def plotSNR(self):
+        '''
+        '''
+        self.snrTrack[self.trialN] = self.snr
+        plt.plot(self.snrTrack, 'bo-')
+        plt.ylim([20.0, -20.0])
+        dpi = 300
+        plt.savefig(self.img, format='png', figsize=(800/dpi, 800/dpi), dpi=dpi)
+        self.img.seek(0)
+        plot_url = base64.b64encode(self.img.getvalue()).decode()
+        plot_url = "data:image/png;base64,{}".format(plot_url)
+        socketio.emit("mat_plot_ready", {'data': plot_url}, namespace="/main")
+        self.trialN += 1
 
     def calcSNR(self):
         '''
@@ -219,55 +258,59 @@ class MatTestThread(Thread):
         print(self.snr)
 
 
-    def playStimulus(self):
+    def playStimulus(self, replay=False):
         self.newResp = False
         socketio.emit("mat_stim_playing", namespace="/main")
-        y = self.generateTrial(self.snr)
+        if not replay:
+            self.y = self.generateTrial(self.snr)
         # Play audio
-        sd.play(y, self.fs, blocking=True)
+        sd.play(self.y, self.fs, blocking=True)
         socketio.emit("mat_stim_done", namespace="/main")
 
-    def preloadStimulus(self, listDir):
-        return
 
-
-    def loadStimulus(self, listDir, n=20, demo=False):
+    def loadStimulus(self, listDir, n=3, demo=False):
+        # Get folder path of all lists in the list directory
         lists = next(os.walk(listDir))[1]
         lists.pop(lists.index("demo"))
+        # Don't reload an lists that have already been loaded
         pop = [lists.index(x) for x in self.loadedLists]
         for i in sorted(pop, reverse=True):
             del lists[i]
         # Randomly select n lists
-        inds = list(range(n))
+        inds = list(range(len(lists)))
         random.shuffle(inds)
-        inds = inds[:3]
+        # Pick first n shuffled lists
+        inds = inds[:n]
         for ind in inds:
+            # Get filepaths to the audiofiles and word csv file for the current
+            # list
             listAudiofiles = globDir(os.path.join(listDir, lists[ind]), "*.wav")
             listCSV = globDir(os.path.join(listDir, lists[ind]), "*.csv")
             with open(listCSV[0]) as csv_file:
                 csv_reader = csv.reader(csv_file)
+                # Allocate empty lists to store audio samples, RMS and words of
+                # each list sentence
                 self.lists.append([])
                 self.listsRMS.append([])
                 self.listsString.append([])
+                # Get data for each sentence
                 for fp, words in zip(listAudiofiles, csv_reader):
+                    # Read in audio file and calculate it's RMS
                     x, self.fs, _ = sndio.read(fp)
                     x_rms = np.sqrt(np.mean(x**2))
                     self.lists[-1].append(x)
                     self.listsRMS[-1].append(x_rms)
                     self.listsString[-1].append(words)
 
-        zipShuffle = list(zip(self.lists, self.listsRMS, self.listsString))
-        random.shuffle(zipShuffle)
-        self.lists, self.listsRMS, self.listsString = zip(*zipShuffle)
-        self.lists = list(self.lists)
-        self.listsRMS = list(self.listsRMS)
-        self.listsString = list(self.listsString)
+        # Shuffle order of sentence presentation
         self.availableSentenceInds = list(range(len(self.lists[0])))
         random.shuffle(self.availableSentenceInds)
 
 
-
     def loadNoise(self, noiseFilepath):
+        '''
+        Read noise samples and calculate the RMS of the signal
+        '''
         x, _, _ = sndio.read(noiseFilepath)
         self.noise = x
         self.noise_rms = np.sqrt(np.mean(self.noise**2))
@@ -278,36 +321,58 @@ class MatTestThread(Thread):
 
 
     def generateTrial(self, snr):
-        # Load speech
+        # If all sentences in the current list have been presented...
         if not self.availableSentenceInds:
+            # Set subsequent list as the current list
             del self.lists[0]
             self.availableSentenceInds = list(range(len(self.lists[0])))
             random.shuffle(self.availableSentenceInds)
         currentSentenceInd = self.availableSentenceInds.pop(0)
+        # Convert desired SNR to dB FS
         snr_fs = 10**(snr/20)
+        # Get speech data
         x = self.lists[0][currentSentenceInd]
         x_rms = self.listsRMS[0][currentSentenceInd]
         self.currentWords = self.listsString[0][currentSentenceInd]
-        # Load noise
+        # Get noise data
         noiseLen = x.size + self.fs
         start = random.randint(0, self.noise.size-noiseLen)
         end = start + noiseLen
         x_noise = self.noise[start:end]
         # Calculate RMS of noise
         noise_rms = np.sqrt(np.mean(x_noise**2))
+        # Scale noise to match the RMS of the speech
         x_noise = x_noise*(x_rms/noise_rms)
         y = x_noise
+        # Set speech to start 500ms after the noise, scaled to the desired SNR
         sigStart = round(self.fs/2.)
         y[sigStart:sigStart+x.size] += x*snr_fs
-        # Mix speech and noise at set SNR
         return y
 
 
     def submitMatResponse(self, msg):
         '''
+        Get and store participant response for current trial
         '''
         self.response = [x.upper() for x in msg['resp']]
         self.newResp = True
+
+
+    def saveState(self):
+        toSave = ['listsRMS', 'y', 'currentList', 'foundSRT', 'slope',
+                  'response', 'snr', 'snrTrack', 'direction', 'noise_rms', 'i',
+                  'currentWords', 'usedLists', 'availableSentenceInds',
+                  'newResp', 'trialN', 'listsString', 'noise', 'fs',
+                  'nCorrect', 'loadedLists', 'lists']
+        saveDict = {k:self.__dict__[k] for k in toSave}
+        with open('mat_state.pik', 'wb') as f:
+            dill.dump(saveDict, f)
+
+
+    def loadState(self):
+        with open('mat_state.pik', 'rb') as f:
+            self.__dict__.update(dill.load(f))
+        self.plotSNR()
 
 
     def run(self):

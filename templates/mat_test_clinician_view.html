@@ -1,3 +1,30 @@
 {% extends 'index.html' %}
 {% block content %}
+<div>
+    <img id="mat_plot" class="center"/>
+    <div class="btn-toolbar-lg d-flex justify-content-center" role="group">
+        <button type="button" id="mat-repeat" class="btn btn-primary">Repeat audio</button>
+        <button type="button" id="mat-save" class="btn btn-primary">Save test state</button>
+        <button type="button" id="mat-load" class="btn btn-primary">Load test state</button>
+        <button type="button" id="mat-finish" class="btn btn-primary">Finish test</button>
+    </div>
+</div>
+
+<script>
+$(document).ready(function(){
+    // Initialise socketio with a namespace called "main"
+    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+
+    $('#mat-save').click(function(event) {
+        socket.emit("mat_save_state")
+    });
+    $('#mat-load').click(function(event) {
+        socket.emit("mat_load_state")
+    });
+    socket.on('mat_plot_ready', function(msg) {
+        console.log(msg)
+        $('#mat_plot').attr('src', msg.data);
+    });
+});
+</script>
 {% endblock %}

@@ -16,7 +16,7 @@
                 <button type="button" id="save-dir-button" class="btn btn-primary">Browse...</button>
             </div>
             <div class="form-group">
-                <a type="button" id="submit" href="matrix_test/run" class="btn btn-primary">Start test</a>
+                <button type="button" id="submit" class="btn btn-primary">Start test</button>
             </div>
         </form>
     </div>
@@ -37,6 +37,12 @@
             socket.emit('open_save_dialog');
             return false;
         })
+
+        socket.on('participant_start_mat', function(msg) {
+            // Set form test to filepath returned by dialog
+            window.location.href = '/matrix_test/control';
+        });
+
 
         socket.on('save-dialog-resp', function(msg) {
             // Set form test to filepath returned by dialog

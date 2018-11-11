@@ -86,8 +86,8 @@
             $('#mat-submit').prop("disabled", true);
             if(choice.includes('')) {
                 alert("Please select a word from each column");
-                return false;
                 $('#mat-submit').prop("disabled", false);
+                return false;
             }
             else {
                 $('.mat-button').removeClass("active");
