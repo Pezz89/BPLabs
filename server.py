@@ -27,7 +27,7 @@ from pysndfile import sndio
 from app import generate_matrix_stimulus
 from matrix_test.filesystem import globDir, organiseWavs, prepareOutDir
 from pathops import dir_must_exist
-
+from scipy.optimize import minimize
 
 import config
 
@@ -240,12 +240,13 @@ class MatTestThread(Thread):
         '''
         return 1./(1.+np.exp(4.*s_50*(L_50-L)))
 
-    def mleLogisticFunc(self, L_50, s_50):
+    def mleLogisticFunc(self, args):
+        L_50, s_50 = args
         res = []
         for ind, snr in enumerate(self.trackSNR):
             ck = self.wordsCorrect[ind]
             res.append((self.logisticFunction(snr, L_50, s_50)**ck)*(((1.-self.logisticFunction(snr, L_50, s_50))**(1.-ck))))
-        return np.log(np.prod(np.concatenate(res)))
+        return -np.log(np.prod(np.concatenate(res)))
 
 
     def fitLogistic(self):
@@ -253,7 +254,8 @@ class MatTestThread(Thread):
         '''
         self.wordsCorrect = self.wordsCorrect[:self.trialN].astype(float)
         self.trackSNR = self.snrTrack[:self.trialN]
-        res = self.mleLogisticFunc(-10.0, 0.5)
+        res = minimize(self.mleLogisticFunc, np.array([-5.0,1.0]), method='L-BFGS-B')
+        # res = self.mleLogisticFunc(-10.0, 0.5)
         set_trace()
 
 
