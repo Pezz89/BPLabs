@@ -163,6 +163,8 @@ class MatTestThread(Thread):
         self.socketio.on_event('mat_page_loaded', self.setPageLoaded, namespace='/main')
         self.socketio.on_event('save_file_dialog_resp', self.manualSave, namespace='/main')
         self.socketio.on_event('load_file_dialog_resp', self.loadStateSocketHandle, namespace='/main')
+        self.socketio.on_event('repeat_stimulus', self.playStimulusSocketHandle, namespace='/main')
+
 
         self.loadedLists = []
         self.lists = []
@@ -264,6 +266,8 @@ class MatTestThread(Thread):
         self.snrTrack[self.trialN] = self.snr
         self.trialN += 1
 
+    def playStimulusSocketHandle(self):
+        self.playStimulus(replay=True)
 
     def playStimulus(self, replay=False):
         self.newResp = False

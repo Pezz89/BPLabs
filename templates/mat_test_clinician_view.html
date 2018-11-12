@@ -19,6 +19,9 @@ $(document).ready(function(){
     $('#mat-save').click(function(event) {
         socket.emit("open_save_file_dialog")
     });
+    $('#mat-repeat').click(function(event) {
+        socket.emit("repeat_stimulus")
+    });
     socket.on('mat_plot_ready', function(msg) {
         console.log(msg)
         $('#mat_plot').attr('src', msg.data);
