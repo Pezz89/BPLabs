@@ -101,6 +101,10 @@
             $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
             alert("Matrix stimulus processing complete!")
         });
+
+        socket.on('main-notification', function(msg) {
+            alert(msg.data)
+        });
     });
     </script>
 </body>

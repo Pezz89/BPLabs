@@ -26,6 +26,7 @@ import random
 from pysndfile import sndio
 from app import generate_matrix_stimulus
 from matrix_test.filesystem import globDir, organiseWavs, prepareOutDir
+from pathops import dir_must_exist
 
 
 import config
@@ -203,7 +204,6 @@ class MatTestThread(Thread):
             # Preload audio at start of the test
             self.loadStimulus(listFolder, n=self.listN)
             self.loadNoise(noiseFilepath)
-        set_trace()
 
 
     def waitForResponse(self):
@@ -431,7 +431,8 @@ def start_backup_mat_test():
 
     global matThread
     matThread = MatTestThread(sessionFilepath="./mat_state.pik", socketio=socketio)
-    socketio.start_background_task(matThread.run)
+    matThread.start()
+    # socketio.start_background_task(matThread.run)
 
 
 @socketio.on('load_mat_session', namespace='/main')
@@ -445,10 +446,14 @@ def start_saved_mat_test():
         filepath = filepath[0]
         if isinstance(filepath, bytes):
             filepath = filepath.decode("utf-8")
+    else:
+        return None
     socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
     global matThread
     matThread = MatTestThread(sessionFilepath=filepath, socketio=socketio)
-    socketio.start_background_task(matThread.run)
+    matThread.start()
+    #task = socketio.start_background_task(matThread.run)
+    #set_trace()
 
 
 @socketio.on('run_mat_stim_gen', namespace='/main')
@@ -479,14 +484,18 @@ def checkMatProcessingStatus():
 @socketio.on('open_save_file_dialog', namespace='/main')
 def openSaveFileDialog():
     # Open a file dialog interface for selecting a directory
-    filepath = webview.create_file_dialog(dialog_type=webview.SAVE_DIALOG, file_types=("Python Pickle (*.pik)",))
+    filepath = webview.create_file_dialog(dialog_type=webview.SAVE_DIALOG,
+                                          file_types=("Python Pickle (*.pik)",),
+                                          save_filename="test_session.pik")
     if filepath and len(filepath) > 0:
         filepath = filepath[0]
         if isinstance(filepath, bytes):
             filepath = filepath.decode("utf-8")
-    # TODO: Add filepath checking here...
-    # Send message with selected directory to the GUI
-    socketio.emit('save_file_dialog_resp', {'data': filepath}, namespace='/main', broadcast=True, include_self=True)
+        # Make sure file ends with pickle file extension
+        head, tail = os.path.splitext(filepath)
+        filepath = head + ".pik"
+        # Send message with selected directory to the GUI
+        socketio.emit('save_file_dialog_resp', {'data': filepath}, namespace='/main', broadcast=True, include_self=True)
 
 
 @socketio.on('open_load_file_dialog', namespace='/main')
@@ -497,9 +506,10 @@ def openLoadFileDialog():
         filepath = filepath[0]
         if isinstance(filepath, bytes):
             filepath = filepath.decode("utf-8")
-    # TODO: Add filepath checking here...
-    # Send message with selected directory to the GUI
-    socketio.emit('load_file_dialog_resp', {'data': filepath}, namespace='/main', broadcast=True, include_self=True)
+        if not os.path.isfile(filepath):
+            socketio.emit('main-notification', {'data': "\'{}\' is not a valid file".format(directory)}, namespace='/main')
+        # Send message with selected directory to the GUI
+        socketio.emit('load_file_dialog_resp', {'data': filepath}, namespace='/main', broadcast=True, include_self=True)
 
 
 @socketio.on('open_save_dialog', namespace='/main')
@@ -510,9 +520,11 @@ def openSaveDirDialog():
         directory = dirs[0]
         if isinstance(directory, bytes):
             directory = directory.decode("utf-8")
-    # TODO: Add filepath checking here...
-    # Send message with selected directory to the GUI
-    socketio.emit('save-file-dialog-resp', {'data': directory}, namespace='/main')
+        if not os.path.isdir(directory):
+            socketio.emit('main-notification', {'data': "\'{}\' is not a valid directory".format(directory)}, namespace='/main')
+            return None
+        # Send message with selected directory to the GUI
+        socketio.emit('save-file-dialog-resp', {'data': directory}, namespace='/main')
 
 
 @socketio.on('open_mat_dialog', namespace='/main')
@@ -523,9 +535,9 @@ def openMatDialog():
         directory = dirs[0]
         if isinstance(directory, bytes):
             directory = directory.decode("utf-8")
-    # TODO: Add filepath checking here...
-    # Send message with selected directory to the GUI
-    socketio.emit('mat-dialog-resp', {'data': directory}, namespace='/main')
+        # TODO: Add filepath checking here...
+        # Send message with selected directory to the GUI
+        socketio.emit('mat-dialog-resp', {'data': directory}, namespace='/main')
 
 
 @server.route('/click_stim')
@@ -536,6 +548,7 @@ def clickStim():
 @server.route('/da_stim')
 def daStim():
     return render_template("da_stim.html")
+
 
 def set_trace():
     import logging
