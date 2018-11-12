@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from threading import Thread, Lock
 import logging
 import webview
 from time import sleep
 from server import run_server
+import config
+from threading import Lock
+
+socketio = config.socketio
 
 server_lock = Lock()
 
@@ -37,9 +40,10 @@ def create_new_window():
 if __name__ == '__main__':
     logger.debug("Starting server")
     # Run server in seperate thread
-    t = Thread(target=run_server)
-    t.daemon = True
-    t.start()
+    socketio.start_background_task(run_server)
+    # t = Thread(target=run_server)
+    # t.daemon = True
+    # t.start()
     logger.debug("Checking server")
 
     # Check server is up and running
@@ -49,8 +53,9 @@ if __name__ == '__main__':
     logger.debug("Server started")
 
     # Create clinician view
-    t2 = Thread(target=create_new_window)
-    t2.start()
+    #t2 = Thread(target=create_new_window)
+    #t2.start()
+    socketio.start_background_task(create_new_window)
 
     # Create browser window for user interaction with GUI
     webview.create_window("BPLabs",

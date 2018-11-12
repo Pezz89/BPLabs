@@ -151,7 +151,7 @@ class MatTestThread(Thread):
     '''
     Thread for running server side matrix test operations
     '''
-    def __init__(self, sessionFilepath=None, noiseFilepath="./matrix_test/stimulus/wav/noise/noise.wav",
+    def __init__(self, listN=3, sessionFilepath=None, noiseFilepath="./matrix_test/stimulus/wav/noise/noise.wav",
         listFolder="./matrix_test/stimulus/wav/sentence-lists/", socketio=None):
         super(MatTestThread, self).__init__()
         self.newResp = False
@@ -165,7 +165,7 @@ class MatTestThread(Thread):
         self.socketio.on_event('load_file_dialog_resp', self.loadStateSocketHandle, namespace='/main')
         self.socketio.on_event('repeat_stimulus', self.playStimulusSocketHandle, namespace='/main')
 
-
+        self.listN = listN
         self.loadedLists = []
         self.lists = []
         self.listsRMS = []
@@ -189,18 +189,21 @@ class MatTestThread(Thread):
         self.availableSentenceInds = []
         self.usedLists = []
 
-        # Preload audio at start of the test
-        self.loadStimulus(listFolder)
-        self.loadNoise(noiseFilepath)
-
         # Adaptive track parameters
         self.slope = 0.15
         self.i = 0
 
         # Plotting parameters
         self.img = io.BytesIO()
+
+        # If loading session from file, load session variables from the file
         if sessionFilepath:
             self.loadState(sessionFilepath)
+        else:
+            # Preload audio at start of the test
+            self.loadStimulus(listFolder, n=self.listN)
+            self.loadNoise(noiseFilepath)
+        set_trace()
 
 
     def waitForResponse(self):
@@ -374,7 +377,7 @@ class MatTestThread(Thread):
                   'snrTrack', 'direction', 'noise_rms', 'i', 'currentWords',
                   'usedLists', 'availableSentenceInds', 'trialN',
                   'listsString', 'noise', 'fs', 'nCorrect', 'loadedLists',
-                  'lists']
+                  'lists', 'listN']
         saveDict = {k:self.__dict__[k] for k in toSave}
         with open(out, 'wb') as f:
             dill.dump(saveDict, f)
@@ -407,14 +410,15 @@ class MatTestThread(Thread):
 
 
 @socketio.on('start_mat_test', namespace='/main')
-def start_mat_test():
+def start_mat_test(msg):
     '''
     Relay test start message to participant view
     '''
     socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
+    listN = int(msg['listN'])
 
     global matThread
-    matThread = MatTestThread(socketio=socketio)
+    matThread = MatTestThread(socketio=socketio, listN=listN)
     socketio.start_background_task(matThread.run)
 
 
@@ -547,7 +551,6 @@ def run_server():
     Start the Flask server
     '''
     # SocketIO objects are defined in config.py
-    socketio.init_app(server)
     socketio.run(server, host="127.0.0.1", port=23948)
 
 if __name__ == "__main__":
