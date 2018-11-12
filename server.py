@@ -181,6 +181,7 @@ class MatTestThread(Thread):
         self.direction = 0
         # Record SNRs presented with each trial of the adaptive track
         self.snrTrack = np.empty(30)
+        self.wordsCorrect = np.full((30, 5), False, dtype=bool)
         self.snrTrack[:] = np.nan
         self.snrTrack[0] = 0.0
         # Count number of presented trials
@@ -229,7 +230,32 @@ class MatTestThread(Thread):
             self.waitForResponse()
             self.calcSNR()
             self.saveState()
+        self.plotSNR()
+        self.fitLogistic()
         #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
+
+    @staticmethod
+    def logisticFunction(L, L_50, s_50):
+        '''
+        '''
+        return 1./(1.+np.exp(4.*s_50*(L_50-L)))
+
+    def mleLogisticFunc(self, L_50, s_50):
+        res = []
+        for ind, snr in enumerate(self.trackSNR):
+            ck = self.wordsCorrect[ind]
+            res.append((self.logisticFunction(snr, L_50, s_50)**ck)*(((1.-self.logisticFunction(snr, L_50, s_50))**(1.-ck))))
+        return np.log(np.prod(np.concatenate(res)))
+
+
+    def fitLogistic(self):
+        '''
+        '''
+        self.wordsCorrect = self.wordsCorrect[:self.trialN].astype(float)
+        self.trackSNR = self.snrTrack[:self.trialN]
+        res = self.mleLogisticFunc(-10.0, 0.5)
+        set_trace()
+
 
     def plotSNR(self):
         '''
@@ -247,6 +273,7 @@ class MatTestThread(Thread):
         plot_url = "data:image/png;base64,{}".format(plot_url)
         socketio.emit("mat_plot_ready", {'data': plot_url}, namespace="/main")
 
+
     def calcSNR(self):
         '''
         '''
@@ -263,10 +290,18 @@ class MatTestThread(Thread):
                     self.i += 1
                 self.direction = currentDirection
 
-        if not len(self.lists):
-            self.foundSRT = True
-            return
+        # If all sentences in the current list have been presented...
+        if not self.availableSentenceInds:
+            # Set subsequent list as the current list
+            del self.lists[0]
+            if not len(self.lists):
+                self.foundSRT = True
+                self.wordsCorrect[self.trialN-1] = correct
+                return None
+            self.availableSentenceInds = list(range(len(self.lists[0])))
+            random.shuffle(self.availableSentenceInds)
         self.snrTrack[self.trialN] = self.snr
+        self.wordsCorrect[self.trialN-1] = correct
         self.trialN += 1
 
     def playStimulusSocketHandle(self):
@@ -335,12 +370,6 @@ class MatTestThread(Thread):
 
 
     def generateTrial(self, snr):
-        # If all sentences in the current list have been presented...
-        if not self.availableSentenceInds:
-            # Set subsequent list as the current list
-            del self.lists[0]
-            self.availableSentenceInds = list(range(len(self.lists[0])))
-            random.shuffle(self.availableSentenceInds)
         currentSentenceInd = self.availableSentenceInds.pop(0)
         # Convert desired SNR to dB FS
         snr_fs = 10**(snr/20)
@@ -377,7 +406,7 @@ class MatTestThread(Thread):
                   'snrTrack', 'direction', 'noise_rms', 'i', 'currentWords',
                   'usedLists', 'availableSentenceInds', 'trialN',
                   'listsString', 'noise', 'fs', 'nCorrect', 'loadedLists',
-                  'lists', 'listN']
+                  'lists', 'listN', 'wordsCorrect']
         saveDict = {k:self.__dict__[k] for k in toSave}
         with open(out, 'wb') as f:
             dill.dump(saveDict, f)

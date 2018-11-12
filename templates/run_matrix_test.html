@@ -106,6 +106,13 @@
         socket.on('mat_stim_done', function(msg) {
             $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
         });
+
+        socket.on('processing-complete', function(msg) {
+            $('#main-div').find('input, textarea, button, select').attr('disabled','disabled');
+        });
+
+
+
     });
     </script>
 </div>
