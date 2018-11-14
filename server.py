@@ -5,6 +5,7 @@ matplotlib.use("Agg")
 import seaborn as sns
 sns.set(style="ticks")
 import matplotlib.pyplot as plt
+import pandas as pd
 import os
 from flask import Flask, url_for, render_template, jsonify, request, make_response, g
 from flask_socketio import emit
@@ -33,6 +34,22 @@ import config
 
 server = config.server
 socketio = config.socketio
+
+def find_nearest_idx(array, value):
+    '''
+    Adapted from: https://stackoverflow.com/questions/2566412/find-nearest-value-in-numpy-array
+    '''
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx
+
+
+def abline(slope, intercept):
+    """Plot a line from slope and intercept"""
+    axes = plt.gca()
+    x_vals = np.array(axes.get_xlim())
+    y_vals = intercept + slope * x_vals
+    plt.plot(x_vals, y_vals, '--')
 
 
 @server.after_request
@@ -207,6 +224,7 @@ class MatTestThread(Thread):
             self.loadNoise(noiseFilepath)
 
 
+
     def waitForResponse(self):
         while not self.newResp:
             socketio.sleep(0.75)
@@ -237,16 +255,32 @@ class MatTestThread(Thread):
     @staticmethod
     def logisticFunction(L, L_50, s_50):
         '''
+        Calculate logistic function for SNRs L, 50% SRT point L_50, and slope
+        s_50
         '''
         return 1./(1.+np.exp(4.*s_50*(L_50-L)))
 
-    def mleLogisticFunc(self, args):
+    def logisticFuncLiklihood(self, args):
+        '''
+        Calculate the log liklihood for given L_50 and s_50 parameters.
+        This function is designed for use with the scipy minimize optimisation
+        function to find the optimal L_50 and s_50 parameters.
+
+        args: a tuple containing (L_50, s_50)
+        self.wordsCorrect: an n dimensional binary array of shape (N, 5),
+            containing the correctness of responses to each of the 5 words for N
+            trials
+        self.trackSNR: A sorted list of SNRs of shape N, for N trials
+        '''
         L_50, s_50 = args
-        res = []
-        for ind, snr in enumerate(self.trackSNR):
-            ck = self.wordsCorrect[ind]
-            res.append((self.logisticFunction(snr, L_50, s_50)**ck)*(((1.-self.logisticFunction(snr, L_50, s_50))**(1.-ck))))
-        return -np.log(np.prod(np.concatenate(res)))
+        ck = self.wordsCorrect[np.arange(self.trackSNR.shape[0])]
+        p_lf = self.logisticFunction(self.trackSNR, L_50, s_50)
+        # Reshape array for vectorized calculation of log liklihood
+        p_lf = p_lf[:, np.newaxis].repeat(5, axis=1)
+        # Calculate the liklihood
+        res = (p_lf**ck)*(((1.-p_lf)**(1.-ck)))
+        out = -np.sum(np.log(np.concatenate(res)))
+        return out
 
 
     def fitLogistic(self):
@@ -254,9 +288,50 @@ class MatTestThread(Thread):
         '''
         self.wordsCorrect = self.wordsCorrect[:self.trialN].astype(float)
         self.trackSNR = self.snrTrack[:self.trialN]
-        res = minimize(self.mleLogisticFunc, np.array([-5.0,1.0]), method='L-BFGS-B')
-        # res = self.mleLogisticFunc(-10.0, 0.5)
-        set_trace()
+        res = minimize(self.logisticFuncLiklihood, np.array([-5.0,1.0]), method='L-BFGS-B')
+        percent_correct = (np.sum(self.wordsCorrect, axis=1)/self.wordsCorrect.shape[1])*100.
+        sortedSNRind = np.argsort(-self.trackSNR)
+        sortedSNR = self.trackSNR[sortedSNRind]
+        sortedPC = percent_correct[sortedSNRind]
+        x = np.linspace(np.min(sortedSNR)-5, np.max(sortedSNR)+3, 3000)
+        snr_50, s_50 = res.x
+        x_y = self.logisticFunction(x, snr_50, s_50)
+        # np.savez('./plot.npz', x, x_y*100., sortedSNR, sortedPC)
+
+        # snrPC = pd.DataFrame(sortedPC, sortedSNR)
+        # sns.kdeplot(sortedSNR, sortedPC, cmap="Blues", shade=True)
+        # sns.relplot(data=snrPC)
+        # sns.relplot(x, x_y, kind="line")
+
+        plt.clf()
+        #plt.plot(sortedSNR, sortedPC, "x")
+        #sbnplot = sns.relplot(data=pd.DataFrame(x_y*100., x), kind="line")
+        x_y *= 100.
+        axes = plt.gca()
+        psycLine, = axes.plot(x, x_y)
+        plt.xlabel("SNR (dB)")
+        plt.ylabel("% Correct")
+        srtLine, = axes.plot([snr_50,snr_50], [-50,50.], 'r--')
+        axes.plot([-50.,snr_50], [50.,50.], 'r--')
+        plt.xlim(x.min(), x.max())
+        plt.ylim(x_y.min(), x_y.max())
+        plt.yticks(np.arange(5)*25.)
+        x_vals = np.array(axes.get_xlim())
+        s_50 *= 100.
+        b = 50. - s_50 * snr_50
+        y_vals = s_50 * x_vals + b
+        slopeLine, = axes.plot(x_vals, y_vals, '--')
+        ticks = (np.arange((x.max()-x.min())/2.5)*2.5)+(2.5 * round(float(x.min())/2.5))
+        ticks[find_nearest_idx(ticks, snr_50)] = snr_50
+        labels = ["{:.2f}".format(x) for x in ticks]
+        plt.xticks(ticks, labels)
+        plt.legend((psycLine, srtLine, slopeLine), ("Psychometric function", "SRT={:.2f}dB".format(snr_50), "Slope={:.2f}%/dB".format(s_50)))
+        dpi = 300
+        plt.savefig("./test_2.png", format='png', figsize=(800/dpi, 800/dpi), dpi=dpi)
+        self.img.seek(0)
+        plot_url = base64.b64encode(self.img.getvalue()).decode()
+        plot_url = "data:image/png;base64,{}".format(plot_url)
+        socketio.emit("mat_mle_plot_ready", {'data': plot_url}, namespace="/main")
 
 
     def plotSNR(self):
@@ -280,6 +355,9 @@ class MatTestThread(Thread):
         '''
         '''
         correct = np.array([x == y for x, y in zip(self.currentWords, self.response)])
+        print("Current words: {}".format(self.currentWords))
+        print("Response: {}".format(self.response))
+        print("Correct: {}".format(correct))
         self.nCorrect = np.sum(correct)/correct.size
         prevSNR = self.snr
         self.snr -= (((1.5*1.41**-self.i)*(self.nCorrect - 0.5))/self.slope)
@@ -296,6 +374,8 @@ class MatTestThread(Thread):
         if not self.availableSentenceInds:
             # Set subsequent list as the current list
             del self.lists[0]
+            del self.listsRMS[0]
+            del self.listsString[0]
             if not len(self.lists):
                 self.foundSRT = True
                 self.wordsCorrect[self.trialN-1] = correct
