@@ -119,21 +119,28 @@ def homepage():
 
 
 @server.route('/matrix_test')
-def matrix_test():
+def matrix_test_setup():
     return render_template("matrix_test_setup.html")
 
 @server.route('/matrix_test/run')
 def run_matrix_test():
-    return render_template("run_matrix_test.html")
+    return render_template("mat_test_run.html")
 
-@server.route('/matrix_test/control')
-def control_matrix_test():
+@server.route('/matrix_test/complete')
+def mat_end():
+    return render_template("mat_test_end.html")
+
+@server.route('/matrix_test/clinician/control')
+def clinician_control_mat():
     return render_template("mat_test_clinician_view.html")
+
+@server.route('/matrix_test/clinician/complete')
+def clinician_mat_end():
+    return render_template("mat_test_clinician_end.html")
 
 @server.route('/matrix_test/stimulus_generation')
 def matDecStim():
     return render_template("matrix_decode_stim.html")
-
 # thread = Thread()
 # thread_stop_event = Event()
 
@@ -214,6 +221,10 @@ class MatTestThread(Thread):
 
         # Plotting parameters
         self.img = io.BytesIO()
+        self.img.seek(0)
+        self.img.truncate(0)
+
+        self._stopevent = Event()
 
         # If loading session from file, load session variables from the file
         if sessionFilepath:
@@ -223,17 +234,22 @@ class MatTestThread(Thread):
             self.loadStimulus(listFolder, n=self.listN)
             self.loadNoise(noiseFilepath)
 
+    def join(self, timeout=None):
+        """ Stop the thread. """
+        self._stopevent.set()
+        Thread.join(self, timeout)
 
 
     def waitForResponse(self):
-        while not self.newResp:
-            socketio.sleep(0.75)
+        while not self.newResp and not self._stopevent.isSet():
+            self._stopevent.wait(0.2)
         return
 
 
     def waitForPageLoad(self):
-        while not self.pageLoaded:
-            socketio.sleep(0.2)
+        while not self.pageLoaded and not self._stopevent.isSet():
+            self.socketio.emit("check-loaded", namespace='/main')
+            self._stopevent.wait(0.5)
         return
 
 
@@ -242,14 +258,18 @@ class MatTestThread(Thread):
         Main loop for iteratively finding the SRT
         '''
         self.waitForPageLoad()
-        while not self.foundSRT:
+        while not self.foundSRT and not self._stopevent.isSet():
             self.plotSNR()
             self.playStimulus()
             self.waitForResponse()
+            if self._stopevent.isSet():
+                return
             self.calcSNR()
             self.saveState()
-        self.plotSNR()
-        self.fitLogistic()
+        if not self._stopevent.isSet():
+            self.plotSNR()
+            self.fitLogistic()
+            self.socketio.emit('processing-complete', {'data': ''}, namespace='/main')
         #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
 
     @staticmethod
@@ -337,6 +357,7 @@ class MatTestThread(Thread):
     def plotSNR(self):
         '''
         '''
+        plt.clf()
         plt.plot(self.snrTrack, 'bo-')
         plt.ylim([20.0, -20.0])
         plt.xticks(np.arange(30))
@@ -517,7 +538,15 @@ class MatTestThread(Thread):
         This function is called when the thread starts
         '''
         self.testLoop()
-        socketio.emit('processing-complete', {'data': ''}, namespace='/main')
+
+
+def run_matrix_thread(listN=None, sessionFilepath=None):
+    global matThread
+    if 'matThread' in globals():
+        if matThread.isAlive() and isinstance(matThread, MatTestThread):
+            matThread.join()
+    matThread = MatTestThread(socketio=socketio, listN=listN, sessionFilepath=sessionFilepath)
+    matThread.start()
 
 
 @socketio.on('start_mat_test', namespace='/main')
@@ -528,9 +557,7 @@ def start_mat_test(msg):
     socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
     listN = int(msg['listN'])
 
-    global matThread
-    matThread = MatTestThread(socketio=socketio, listN=listN)
-    socketio.start_background_task(matThread.run)
+    run_matrix_thread(listN=listN)
 
 
 @socketio.on('load_mat_backup', namespace='/main')
@@ -540,10 +567,7 @@ def start_backup_mat_test():
     '''
     socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
 
-    global matThread
-    matThread = MatTestThread(sessionFilepath="./mat_state.pik", socketio=socketio)
-    matThread.start()
-    # socketio.start_background_task(matThread.run)
+    run_matrix_thread(sessionFilepath="./mat_state.pik")
 
 
 @socketio.on('load_mat_session', namespace='/main')
@@ -560,11 +584,7 @@ def start_saved_mat_test():
     else:
         return None
     socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
-    global matThread
-    matThread = MatTestThread(sessionFilepath=filepath, socketio=socketio)
-    matThread.start()
-    #task = socketio.start_background_task(matThread.run)
-    #set_trace()
+    run_matrix_thread(sessionFilepath=filepath)
 
 
 @socketio.on('run_mat_stim_gen', namespace='/main')

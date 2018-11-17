@@ -22,8 +22,8 @@ $(document).ready(function(){
     $('#mat-repeat').click(function(event) {
         socket.emit("repeat_stimulus")
     });
+
     socket.on('mat_plot_ready', function(msg) {
-        console.log(msg)
         $('#mat_plot').attr('src', msg.data);
     });
     // FIXME: A terrible hack because I can't get the main thread to talk to

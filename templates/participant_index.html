@@ -63,11 +63,16 @@
             $('#progress').css("width", msg.data);
         });
 
+        socket.on('participant_start_mat', function() {
+            window.location.href = "/matrix_test/run";
+        });
+
         // Catch message when asynchronous process is complete
         socket.on('processing-complete', function(msg) {
             // Re-enable all inputs
             $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
             alert("Matrix stimulus processing complete!")
+            window.location.href = '/matrix_test/complete';
         });
     });
     </script>
