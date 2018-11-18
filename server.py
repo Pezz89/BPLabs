@@ -191,6 +191,7 @@ class MatTestThread(Thread):
         self.socketio.on_event('save_file_dialog_resp', self.manualSave, namespace='/main')
         self.socketio.on_event('load_file_dialog_resp', self.loadStateSocketHandle, namespace='/main')
         self.socketio.on_event('repeat_stimulus', self.playStimulusSocketHandle, namespace='/main')
+        self.socketio.on_event('finish_test', self.finishTestEarly, namespace='/main')
 
         self.listN = listN
         self.loadedLists = []
@@ -236,6 +237,37 @@ class MatTestThread(Thread):
             self.loadStimulus(listFolder, n=self.listN)
             self.loadNoise(noiseFilepath)
 
+
+    def testLoop(self):
+        '''
+        Main loop for iteratively finding the SRT
+        '''
+        self.waitForPageLoad()
+        while not self.foundSRT and not self._stopevent.isSet():
+            self.plotSNR()
+            self.playStimulus()
+            self.waitForResponse()
+            if self.foundSRT:
+                break
+            if self._stopevent.isSet():
+                return
+            self.calcSNR()
+            self.saveState()
+
+        if not self._stopevent.isSet():
+            self.unsetPageLoaded()
+            self.socketio.emit('processing-complete', {'data': ''}, namespace='/main')
+            self.waitForPageLoad()
+            self.plotSNR()
+            self.fitLogistic()
+        self.saveState()
+        #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
+
+
+    def finishTestEarly(self):
+        self.foundSRT = True
+
+
     def join(self, timeout=None):
         """ Stop the thread. """
         self._stopevent.set()
@@ -243,7 +275,7 @@ class MatTestThread(Thread):
 
 
     def waitForResponse(self):
-        while not self.newResp and not self._stopevent.isSet():
+        while not self.newResp and not self._stopevent.isSet() and not self.foundSRT:
             self._stopevent.wait(0.2)
         return
 
@@ -255,30 +287,6 @@ class MatTestThread(Thread):
         return
 
 
-    def testLoop(self):
-        '''
-        Main loop for iteratively finding the SRT
-        '''
-        self.waitForPageLoad()
-        while not self.foundSRT and not self._stopevent.isSet():
-            self.plotSNR()
-            self.playStimulus()
-            self.waitForResponse()
-            if self._stopevent.isSet():
-                return
-            self.calcSNR()
-            self.saveState()
-        if not self._stopevent.isSet():
-            self.pageLoaded = False
-            self.partPageLoaded = False
-            self.clinPageLoaded = False
-            self.socketio.emit('processing-complete', {'data': ''}, namespace='/main')
-            self.waitForPageLoad()
-            self.plotSNR()
-            self.fitLogistic()
-        self.saveState()
-        #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
-
     @staticmethod
     def logisticFunction(L, L_50, s_50):
         '''
@@ -286,6 +294,7 @@ class MatTestThread(Thread):
         s_50
         '''
         return 1./(1.+np.exp(4.*s_50*(L_50-L)))
+
 
     def logisticFuncLiklihood(self, args):
         '''
@@ -492,6 +501,11 @@ class MatTestThread(Thread):
         self.noise = x
         self.noise_rms = np.sqrt(np.mean(self.noise**2))
 
+
+    def unsetPageLoaded(self):
+        self.pageLoaded = False
+        self.partPageLoaded = False
+        self.clinPageLoaded = False
 
     def setPageLoaded(self, msg):
         if msg['data'] == "clinician":

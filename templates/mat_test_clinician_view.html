@@ -22,6 +22,9 @@ $(document).ready(function(){
     $('#mat-repeat').click(function(event) {
         socket.emit("repeat_stimulus")
     });
+    $('#mat-finish').click(function(event) {
+        socket.emit("finish_test")
+    });
 
     socket.on('mat_plot_ready', function(msg) {
         $('#mat_plot').attr('src', msg.data);
