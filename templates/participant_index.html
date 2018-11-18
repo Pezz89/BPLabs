@@ -74,6 +74,10 @@
             alert("Matrix stimulus processing complete!")
             window.location.href = '/matrix_test/complete';
         });
+
+        socket.on('check-loaded', function(msg) {
+            socket.emit('mat_page_loaded', {data: "participant"});
+        });
     });
     </script>
 </body>

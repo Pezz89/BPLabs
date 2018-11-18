@@ -34,6 +34,10 @@ $(document).ready(function(){
     socket.on('load_file_dialog_resp', function(msg) {
         socket.emit("load_file_dialog_resp", msg)
     });
+
+    socket.on('check-loaded', function(msg) {
+        socket.emit('mat_page_loaded', {data: "clinician"});
+    });
 });
 </script>
 {% endblock %}

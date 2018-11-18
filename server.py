@@ -182,6 +182,8 @@ class MatTestThread(Thread):
         self.newResp = False
         self.foundSRT = False
         self.pageLoaded = False
+        self.clinPageLoaded = False
+        self.partPageLoaded = False
         self.socketio = socketio
         # Attach messages from gui to class methods
         self.socketio.on_event('submit_mat_response', self.submitMatResponse, namespace='/main')
@@ -267,9 +269,14 @@ class MatTestThread(Thread):
             self.calcSNR()
             self.saveState()
         if not self._stopevent.isSet():
+            self.pageLoaded = False
+            self.partPageLoaded = False
+            self.clinPageLoaded = False
+            self.socketio.emit('processing-complete', {'data': ''}, namespace='/main')
+            self.waitForPageLoad()
             self.plotSNR()
             self.fitLogistic()
-            self.socketio.emit('processing-complete', {'data': ''}, namespace='/main')
+        self.saveState()
         #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
 
     @staticmethod
@@ -299,7 +306,13 @@ class MatTestThread(Thread):
         p_lf = p_lf[:, np.newaxis].repeat(5, axis=1)
         # Calculate the liklihood
         res = (p_lf**ck)*(((1.-p_lf)**(1.-ck)))
-        out = -np.sum(np.log(np.concatenate(res)))
+        with np.errstate(divide='raise'):
+            try:
+                a = np.concatenate(res)
+                #a[a == 0] = a.max()
+                out = np.sum(a**2)
+            except:
+                set_trace()
         return out
 
 
@@ -308,7 +321,7 @@ class MatTestThread(Thread):
         '''
         self.wordsCorrect = self.wordsCorrect[:self.trialN].astype(float)
         self.trackSNR = self.snrTrack[:self.trialN]
-        res = minimize(self.logisticFuncLiklihood, np.array([-5.0,1.0]), method='L-BFGS-B')
+        res = minimize(self.logisticFuncLiklihood, np.array([np.mean(self.trackSNR),1.0]))
         percent_correct = (np.sum(self.wordsCorrect, axis=1)/self.wordsCorrect.shape[1])*100.
         sortedSNRind = np.argsort(-self.trackSNR)
         sortedSNR = self.trackSNR[sortedSNRind]
@@ -316,6 +329,7 @@ class MatTestThread(Thread):
         x = np.linspace(np.min(sortedSNR)-5, np.max(sortedSNR)+3, 3000)
         snr_50, s_50 = res.x
         x_y = self.logisticFunction(x, snr_50, s_50)
+        x_y *= 100.
         # np.savez('./plot.npz', x, x_y*100., sortedSNR, sortedPC)
 
         # snrPC = pd.DataFrame(sortedPC, sortedSNR)
@@ -323,10 +337,9 @@ class MatTestThread(Thread):
         # sns.relplot(data=snrPC)
         # sns.relplot(x, x_y, kind="line")
 
-        plt.clf()
         #plt.plot(sortedSNR, sortedPC, "x")
         #sbnplot = sns.relplot(data=pd.DataFrame(x_y*100., x), kind="line")
-        x_y *= 100.
+        plt.clf()
         axes = plt.gca()
         psycLine, = axes.plot(x, x_y)
         plt.xlabel("SNR (dB)")
@@ -347,7 +360,7 @@ class MatTestThread(Thread):
         plt.xticks(ticks, labels)
         plt.legend((psycLine, srtLine, slopeLine), ("Psychometric function", "SRT={:.2f}dB".format(snr_50), "Slope={:.2f}%/dB".format(s_50)))
         dpi = 300
-        plt.savefig("./test_2.png", format='png', figsize=(800/dpi, 800/dpi), dpi=dpi)
+        plt.savefig(self.img, format='png', figsize=(800/dpi, 800/dpi), dpi=dpi)
         self.img.seek(0)
         plot_url = base64.b64encode(self.img.getvalue()).decode()
         plot_url = "data:image/png;base64,{}".format(plot_url)
@@ -468,8 +481,13 @@ class MatTestThread(Thread):
         self.noise_rms = np.sqrt(np.mean(self.noise**2))
 
 
-    def setPageLoaded(self):
-        self.pageLoaded = True
+    def setPageLoaded(self, msg):
+        if msg['data'] == "clinician":
+            self.clinPageLoaded = True
+        else:
+            self.partPageLoaded = True
+        self.pageLoaded = self.clinPageLoaded and self.partPageLoaded
+
 
 
     def generateTrial(self, snr):
