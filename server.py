@@ -309,8 +309,8 @@ class MatTestThread(Thread):
         with np.errstate(divide='raise'):
             try:
                 a = np.concatenate(res)
-                #a[a == 0] = a.max()
-                out = np.sum(a**2)
+                a[a == 0] = a.max()
+                out = -np.sum(np.log(a))
             except:
                 set_trace()
         return out
