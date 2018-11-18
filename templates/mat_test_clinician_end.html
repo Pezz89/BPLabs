@@ -1,0 +1,52 @@
+{% extends 'index.html' %}
+{% block content %}
+<div>
+    <div class="container p-0">
+        <div class="row">
+            <div class="col p-0 m-0">
+                <img id="mat_plot" src="/static/default_plot.png" width="100%"/>
+            </div>
+            <div class="col p-0 m-0">
+                <img id="mle_plot" src="/static/default_mle_plot.png" width="100%"/>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-center mt-2" role="group">
+        <button type="button" id="mat-save" class="btn btn-primary mx-3">Save test state as...</button>
+    </div>
+</div>
+
+<script>
+$(document).ready(function(){
+    // Initialise socketio with a namespace called "main"
+    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+
+    $('#mat-save').click(function(event) {
+        socket.emit("open_save_file_dialog")
+    });
+    $('#mat-repeat').click(function(event) {
+        socket.emit("repeat_stimulus")
+    });
+    socket.on('mat_plot_ready', function(msg) {
+        console.log(msg)
+        $('#mat_plot').attr('src', msg.data);
+    });
+    socket.on('mat_mle_plot_ready', function(msg) {
+        console.log(msg)
+        $('#mle_plot').attr('src', msg.data);
+    });
+    // FIXME: A terrible hack because I can't get the main thread to talk to
+    // the subthread directly using socketio...
+    socket.on('save_file_dialog_resp', function(msg) {
+        socket.emit("save_file_dialog_resp", msg)
+    });
+    socket.on('load_file_dialog_resp', function(msg) {
+        socket.emit("load_file_dialog_resp", msg)
+    });
+
+    socket.on('check-loaded', function(msg) {
+        socket.emit('mat_page_loaded', {data: "clinician"});
+    });
+});
+</script>
+{% endblock %}

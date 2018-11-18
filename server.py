@@ -342,6 +342,7 @@ class MatTestThread(Thread):
         plt.clf()
         axes = plt.gca()
         psycLine, = axes.plot(x, x_y)
+        plt.title("Predicted psychometric function")
         plt.xlabel("SNR (dB)")
         plt.ylabel("% Correct")
         srtLine, = axes.plot([snr_50,snr_50], [-50,50.], 'r--')
@@ -377,6 +378,17 @@ class MatTestThread(Thread):
         plt.xlim([-1, self.trialN])
         plt.xlabel("Trial N")
         plt.ylabel("SNR (dB)")
+        plt.title("Adaptive track")
+        for i, txt in enumerate(self.snrTrack[:self.trialN]):
+            plt.annotate("{0}/{1}".format(
+                np.sum(self.wordsCorrect[i]).astype(int),
+                self.wordsCorrect[i].size),
+                (i, self.snrTrack[i]),
+                xytext=(0, 13),
+                va="center",
+                ha="center",
+                textcoords='offset points'
+            )
         dpi = 300
         plt.savefig(self.img, format='png', figsize=(800/dpi, 800/dpi), dpi=dpi)
         self.img.seek(0)
