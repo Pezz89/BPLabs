@@ -12,6 +12,7 @@ from flask_socketio import emit
 import pdb
 import csv
 import io
+import re
 import base64
 import dill
 
@@ -36,6 +37,46 @@ import config
 
 server = config.server
 socketio = config.socketio
+
+participants = []
+
+
+class StimGenThread(Thread):
+    '''
+    Thread object for asynchronous processing of data in Python without locking
+    up the GUI
+    '''
+    def __init__(self, *args, **kwargs):
+        super(StimGenThread, self).__init__()
+        self.args = args
+        self.kwargs = kwargs
+
+
+    def process_stimulus(self):
+        '''
+        An example process
+        '''
+        filenames = generate_matrix_stimulus(*self.args, **self.kwargs)
+        generateSpeechShapedNoise(args['OutDir'], noiseDir, order=20, plot=True)
+        #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
+
+
+    def run(self):
+        '''
+        This function is called when the thread starts
+        '''
+        self.process_stimulus()
+        socketio.emit('processing-complete', {'data': ''}, namespace='/main')
+
+
+def run_matrix_thread(listN=None, sessionFilepath=None):
+    global matThread
+    if 'matThread' in globals():
+        if matThread.isAlive() and isinstance(matThread, MatTestThread):
+            matThread.join()
+    matThread = MatTestThread(socketio=socketio, listN=listN, sessionFilepath=sessionFilepath)
+    matThread.start()
+
 
 @server.after_request
 def add_header(response):
@@ -77,12 +118,48 @@ def fullscreen():
 
 @server.route('/participant/create')
 def create_participant_page():
-    return render_template("create_participant.html")
+    # Find all pre-existing participants
+    participant_locs = find_participants()
+    part_num = gen_participant_num(participant_locs)
+    return render_template("create_participant.html", num=part_num)
+
+def find_participants(folder='./participant_data/'):
+    '''
+    Returns a tuple of (participant number, participant filepath) for every
+    participant folder found in directory provided
+    '''
+    part_folder = [os.path.join(folder, o) for o in os.listdir(folder)
+                        if os.path.isdir(os.path.join(folder,o))]
+    part_nums = []
+    for path in part_folder:
+        bn = os.path.basename(path)
+        m = re.search(r'\d+$', bn)
+        num = int(m.group())
+        part_nums.append(num)
+    return list(zip(part_nums, part_folder))
+
+def gen_participant_num(participant_locs, N = 100):
+    # generate array of numbers that haven't been taken between 0-100
+    # if list is empty increment until list isnt empty
+    # Choose a number
+    taken_nums = []
+    for num, loc in participant_locs:
+        taken_nums.append(num)
+    n = 0
+    num_found = False
+    while not num_found:
+        potential_nums = np.arange(N)+n+1
+        valid_nums = np.setdiff1d(potential_nums, taken_nums)
+        if valid_nums.size:
+            num_found = True
+        else:
+            n += N
+    return np.random.choice(valid_nums)
 
 @server.route('/participant/create/submit', methods=["POST"])
 def create_participant_submit():
     data = request.form
-    set_trace()
+    participants.append(Participant(participant_dir="./participant_data/participant_{}".format(data['number']), **data))
     return render_template("manage_participants.html")
 
 @server.route('/participant_home')
@@ -138,44 +215,6 @@ def clinician_mat_end():
 @server.route('/matrix_test/stimulus_generation')
 def matDecStim():
     return render_template("matrix_decode_stim.html")
-
-class StimGenThread(Thread):
-    '''
-    Thread object for asynchronous processing of data in Python without locking
-    up the GUI
-    '''
-    def __init__(self, *args, **kwargs):
-        super(StimGenThread, self).__init__()
-        self.args = args
-        self.kwargs = kwargs
-
-
-    def process_stimulus(self):
-        '''
-        An example process
-        '''
-        filenames = generate_matrix_stimulus(*self.args, **self.kwargs)
-        generateSpeechShapedNoise(args['OutDir'], noiseDir, order=20, plot=True)
-        #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
-
-
-    def run(self):
-        '''
-        This function is called when the thread starts
-        '''
-        self.process_stimulus()
-        socketio.emit('processing-complete', {'data': ''}, namespace='/main')
-
-
-def run_matrix_thread(listN=None, sessionFilepath=None):
-    global matThread
-    if 'matThread' in globals():
-        if matThread.isAlive() and isinstance(matThread, MatTestThread):
-            matThread.join()
-    matThread = MatTestThread(socketio=socketio, listN=listN, sessionFilepath=sessionFilepath)
-    matThread.start()
-
-
 @socketio.on('start_mat_test', namespace='/main')
 def start_mat_test(msg):
     '''
@@ -202,7 +241,6 @@ def start_saved_mat_test():
     '''
     Relay test start message to participant view
     '''
-
     filepath = webview.create_file_dialog(dialog_type=webview.OPEN_DIALOG, file_types=("Python Pickle (*.pik)",))
     if filepath and len(filepath) > 0:
         filepath = filepath[0]
