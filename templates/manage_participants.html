@@ -1,0 +1,104 @@
+{% extends 'index.html' %}
+{% block content %}
+
+<div class="card">
+    <div class="card-body">
+        <form id='manage_form' method="POST">
+            <div class="form-group">
+                <select class="form-control" name="participant" id="participant">
+                    <option>--</option>
+                    {% for p in part_keys %}
+                    <option>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div id="main-div">
+                <div class="form-group">
+                    <label for="number">Number:</label>
+                    <br>
+                    <input id="number" name="number" type="number" value="1" min="1" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="age">Age:</label>
+                    <br>
+                    <input id="age" name="age" type="number" value="18" max="99" min="18" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Gender:</label>
+                    <br>
+                    <select class="form-control" name="gender" id="gender">
+                        <option>Male</option>
+                        <option>Female</option>
+                        <option>Other</option>
+                        <option>Prefer not to say</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Handedness:</label>
+                    <br>
+                    <select class="form-control" name="handedness" id="handedness">
+                        <option>Right handed</option>
+                        <option>Left handed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="comment">Notes:</label>
+                    <textarea class="form-control" rows="6" id="general_notes" name="general_notes"></textarea>
+                </div> 
+                <div class="form-group d-flex justify-content-center">
+                    <button id="save" type="button" disabled class="btn btn-primary mx-3">Save</button>
+                    <button id="delete" type="button" disabled class="btn btn-danger mx-3">Delete</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+$(document).ready(function(){
+    // Initialise socketio with a namespace called "main"
+    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+
+    $('#main-div').find('input, textarea, button, select').attr('disabled','disabled');
+    $('#participant').on('change', function() {
+        if(this.value != '--') {
+            $('#save').removeAttr('disabled')
+            $('#delete').removeAttr('disabled')
+            $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
+            socket.emit("get_part_info", this.value);
+        }
+        else {
+            $('#save').attr('disabled','disabled');
+            $('#delete').attr('disabled','disabled');
+            $('#main-div').find('input, textarea, button, select').attr('disabled','disabled');
+        }
+    });
+
+    $('#save').click(function(event) {
+        var form_data = {
+            number: $('#number').val(),
+            age: $('#age').val(),
+            gender: $('#gender').val(),
+            handedness: $('#handedness').val(),
+            general_notes: $('#general_notes').val()
+        }
+        socket.emit('update_participant', form_data);
+    });
+
+    $('#delete').click(function(event) {
+        var r = confirm("Are you sure you want to delete the participant permenantly?");
+        if (r == true) {
+            socket.emit("delete_participant", $('#participant').val());
+            $("#participant option:selected").remove();
+            $('#main-div').find('input, textarea, button, select').attr('disabled','disabled');
+        } 
+    });
+
+    socket.on('part_info', function(msg) {
+        for(var key in msg) {
+            $('#'+key).val(msg[key]);
+        }
+    });
+});
+</script>
+
+{% endblock %}

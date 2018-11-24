@@ -14,7 +14,7 @@ import csv
 import io
 import re
 import base64
-import dill
+import shutil
 
 import sounddevice as sd
 import webview
@@ -38,7 +38,7 @@ import config
 server = config.server
 socketio = config.socketio
 
-participants = []
+participants = {}
 
 
 class StimGenThread(Thread):
@@ -116,11 +116,34 @@ def fullscreen():
     webview.toggle_fullscreen()
     return jsonify({})
 
+@server.route('/participant/manage')
+def manage_participant_page():
+    # Find all pre-existing participants
+    participants = find_participants()
+    part_num = gen_participant_num(participants)
+    return render_template("manage_participants.html", part_keys=participants.keys())
+
+@socketio.on('delete_participant', namespace='/main')
+def manage_participant_delete(participant_str):
+    shutil.rmtree(participants[participant_str].participant_dir)
+    del participants[participant_str]
+    return render_template("manage_participants.html", part_keys=participants.keys())
+
+@socketio.on('update_participant', namespace='/main')
+def manage_participant_save(data):
+    key = "participant_{}".format(data['number'])
+    participants[key].set_info(data)
+    participants[key].save("info")
+
+@socketio.on('get_part_info', namespace='/main')
+def get_participant_info(key):
+    socketio.emit('part_info', participants[key]['info'], namespace='/main')
+
 @server.route('/participant/create')
 def create_participant_page():
     # Find all pre-existing participants
-    participant_locs = find_participants()
-    part_num = gen_participant_num(participant_locs)
+    participants = find_participants()
+    part_num = gen_participant_num(participants)
     return render_template("create_participant.html", num=part_num)
 
 def find_participants(folder='./participant_data/'):
@@ -130,26 +153,28 @@ def find_participants(folder='./participant_data/'):
     '''
     part_folder = [os.path.join(folder, o) for o in os.listdir(folder)
                         if os.path.isdir(os.path.join(folder,o))]
-    part_nums = []
     for path in part_folder:
-        bn = os.path.basename(path)
-        m = re.search(r'\d+$', bn)
-        num = int(m.group())
-        part_nums.append(num)
-    return list(zip(part_nums, part_folder))
+        part_key = os.path.basename(path)
+        participants[part_key] = Participant(participant_dir=path)
+        participants[part_key].load('info')
+    return participants
 
-def gen_participant_num(participant_locs, N = 100):
+def gen_participant_num(participants, N = 100):
     # generate array of numbers that haven't been taken between 0-100
     # if list is empty increment until list isnt empty
     # Choose a number
     taken_nums = []
-    for num, loc in participant_locs:
-        taken_nums.append(num)
+    for part_key in participants.keys():
+        participant = participants[part_key]
+        taken_nums.append(participant['info']['number'])
     n = 0
     num_found = False
     while not num_found:
         potential_nums = np.arange(N)+n+1
-        valid_nums = np.setdiff1d(potential_nums, taken_nums)
+        try:
+            valid_nums = np.setdiff1d(potential_nums, taken_nums)
+        except:
+            set_trace()
         if valid_nums.size:
             num_found = True
         else:
@@ -159,8 +184,10 @@ def gen_participant_num(participant_locs, N = 100):
 @server.route('/participant/create/submit', methods=["POST"])
 def create_participant_submit():
     data = request.form
-    participants.append(Participant(participant_dir="./participant_data/participant_{}".format(data['number']), **data))
-    return render_template("manage_participants.html")
+    key = "participant_{}".format(data['number'])
+    participants[key] = Participant(participant_dir="./participant_data/{}".format(key), **data)
+    participants[key].save("info")
+    return render_template("manage_participants.html", part_keys = participants.keys())
 
 @server.route('/participant_home')
 def participant_homepage():
