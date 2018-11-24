@@ -16,7 +16,6 @@ import re
 import base64
 import shutil
 
-import sounddevice as sd
 import webview
 import webbrowser
 import app
@@ -69,12 +68,14 @@ class StimGenThread(Thread):
         socketio.emit('processing-complete', {'data': ''}, namespace='/main')
 
 
-def run_matrix_thread(listN=None, sessionFilepath=None):
+def run_matrix_thread(listN=None, sessionFilepath=None, participant=None):
     global matThread
     if 'matThread' in globals():
         if matThread.isAlive() and isinstance(matThread, MatTestThread):
             matThread.join()
-    matThread = MatTestThread(socketio=socketio, listN=listN, sessionFilepath=sessionFilepath)
+    matThread = MatTestThread(socketio=socketio, listN=listN,
+                              sessionFilepath=sessionFilepath,
+                              participant=participant)
     matThread.start()
 
 
@@ -120,7 +121,6 @@ def fullscreen():
 def manage_participant_page():
     # Find all pre-existing participants
     participants = find_participants()
-    part_num = gen_participant_num(participants)
     return render_template("manage_participants.html", part_keys=participants.keys())
 
 @socketio.on('delete_participant', namespace='/main')
@@ -129,7 +129,7 @@ def manage_participant_delete(participant_str):
     del participants[participant_str]
     return render_template("manage_participants.html", part_keys=participants.keys())
 
-@socketio.on('update_participant', namespace='/main')
+@socketio.on('update_participant_info', namespace='/main')
 def manage_participant_save(data):
     key = "participant_{}".format(data['number'])
     participants[key].set_info(data)
@@ -221,7 +221,8 @@ def homepage():
 
 @server.route('/matrix_test')
 def matrix_test_setup():
-    return render_template("matrix_test_setup.html")
+    participants = find_participants()
+    return render_template("matrix_test_setup.html", part_keys=participants.keys())
 
 @server.route('/matrix_test/run')
 def run_matrix_test():
@@ -242,6 +243,7 @@ def clinician_mat_end():
 @server.route('/matrix_test/stimulus_generation')
 def matDecStim():
     return render_template("matrix_decode_stim.html")
+
 @socketio.on('start_mat_test', namespace='/main')
 def start_mat_test(msg):
     '''
@@ -249,22 +251,36 @@ def start_mat_test(msg):
     '''
     socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
     listN = int(msg['listN'])
+    part_key = msg['part_key']
 
-    run_matrix_thread(listN=listN)
+    if part_key != "--":
+        participant = participants[part_key]
+    else:
+        participant = None
+
+    run_matrix_thread(listN=listN, participant=participant)
 
 
 @socketio.on('load_mat_backup', namespace='/main')
-def start_backup_mat_test():
+def start_backup_mat_test(msg):
     '''
     Relay test start message to participant view
     '''
     socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
+    part_key = msg['part_key']
+    if part_key != "--":
+        participant = participants[part_key]
+        folder = participant.data_paths["adaptive_matrix_data"]
+        backupPath = os.path.join(folder, "mat_state.pik")
+    else:
+        participant = None
+        backupPath = './mat_state.pik'
 
-    run_matrix_thread(sessionFilepath="./mat_state.pik")
+    run_matrix_thread(sessionFilepath=backupPath)
 
 
 @socketio.on('load_mat_session', namespace='/main')
-def start_saved_mat_test():
+def start_saved_mat_test(msg):
     '''
     Relay test start message to participant view
     '''
@@ -275,8 +291,14 @@ def start_saved_mat_test():
             filepath = filepath.decode("utf-8")
     else:
         return None
+
+    part_key = msg['part_key']
+    if part_key != "--":
+        participant = participants[part_key]
+    else:
+        participant = None
     socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
-    run_matrix_thread(sessionFilepath=filepath)
+    run_matrix_thread(sessionFilepath=filepath, participant=participant)
 
 
 @socketio.on('run_mat_stim_gen', namespace='/main')

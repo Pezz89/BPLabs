@@ -4,16 +4,18 @@
     <div id="main-div" class="card-body">
         <form action="{{ url_for('matDecStim') }}" method="POST">
             <div class="form-group">
+                <select class="form-control" name="participant" id="participant">
+                    <option>--</option>
+                    {% for p in part_keys %}
+                    <option>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
                 <label for="open-mat-folder-container">Matrix data folder: </label>
                 <br>
                 <input type="text" id="mat-dir" name='mat_dir' value="./matrix_test/speech_components/" style="width:85%"></input>
                 <button type="button" id="mat-dir-button"  class="btn btn-primary">Browse...</button>
-            </div>
-            <div class="form-group">
-                <label for="open-save-folder-container">New data generation folder: </label>
-                <br>
-                <input type="text" id="save-dir" name='save_dir' style="width:85%"></input>
-                <button type="button" id="save-dir-button" class="btn btn-primary">Browse...</button>
             </div>
             <div class="form-group">
                 <label for="listN">Number of lists:</label>
@@ -35,23 +37,17 @@
 
         $('#load-backup').click(function(event) {
             // Send message to call stimulus generation function in Python
-            socket.emit('load_mat_backup');
+            socket.emit('load_mat_backup', {part_key: $("#participant").val()});
             return false;
         })
         $('#load-saved').click(function(event) {
             // Send message to call stimulus generation function in Python
-            socket.emit('load_mat_session');
+            socket.emit('load_mat_session', {part_key: $("#participant").val()});
             return false;
         })
         $('#submit').click(function(event) {
             // Send message to call stimulus generation function in Python
-            socket.emit('start_mat_test', {listN: $("#listN").val()});
-            return false;
-        })
-
-        $('#save-dir-button').click(function(event) {
-            // Send message to call stimulus generation function in Python
-            socket.emit('open_save_dialog');
+            socket.emit('start_mat_test', {listN: $("#listN").val(), part_key: $("#participant").val()});
             return false;
         })
 

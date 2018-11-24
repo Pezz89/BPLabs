@@ -4,8 +4,23 @@ from threading import Thread, Event
 import io
 import dill
 import base64
+import os
+import random
 from scipy.optimize import minimize
+import csv
 
+from pysndfile import sndio
+from matrix_test.filesystem import globDir
+import sounddevice as sd
+import pdb
+
+def set_trace():
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+    log = logging.getLogger('engineio')
+    log.setLevel(logging.ERROR)
+    pdb.set_trace()
 def find_nearest_idx(array, value):
     '''
     Adapted from: https://stackoverflow.com/questions/2566412/find-nearest-value-in-numpy-array
@@ -28,8 +43,9 @@ class MatTestThread(Thread):
     Thread for running server side matrix test operations
     '''
     def __init__(self, listN=3, sessionFilepath=None, noiseFilepath="./matrix_test/stimulus/wav/noise/noise.wav",
-        listFolder="./matrix_test/stimulus/wav/sentence-lists/", socketio=None):
+        listFolder="./matrix_test/stimulus/wav/sentence-lists/", socketio=None, participant=None):
         super(MatTestThread, self).__init__()
+        self.participant=participant
         self.newResp = False
         self.foundSRT = False
         self.pageLoaded = False
@@ -80,6 +96,12 @@ class MatTestThread(Thread):
 
         self._stopevent = Event()
 
+        if self.participant:
+            folder = self.participant.data_paths['adaptive_matrix_data']
+            self.backupFilepath=os.path.join(folder, 'mat_state.pik')
+        else:
+            self.backupFilepath='./mat_state.pik'
+
         # If loading session from file, load session variables from the file
         if sessionFilepath:
             self.loadState(sessionFilepath)
@@ -103,16 +125,14 @@ class MatTestThread(Thread):
             if self._stopevent.isSet():
                 return
             self.calcSNR()
-            self.saveState()
-
+            self.saveState(out=self.backupFilepath)
+        self.saveState(out=self.backupFilepath)
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
             self.socketio.emit('processing-complete', {'data': ''}, namespace='/main')
             self.waitForPageLoad()
             self.plotSNR()
             self.fitLogistic()
-        self.saveState()
-        #socketio.emit('update-progress', {'data': '{}%'.format(percent)}, namespace='/main')
 
 
     def finishTestEarly(self):
@@ -297,12 +317,12 @@ class MatTestThread(Thread):
 
     def playStimulus(self, replay=False):
         self.newResp = False
-        socketio.emit("mat_stim_playing", namespace="/main")
+        self.socketio.emit("mat_stim_playing", namespace="/main")
         if not replay:
             self.y = self.generateTrial(self.snr)
         # Play audio
         sd.play(self.y, self.fs, blocking=True)
-        socketio.emit("mat_stim_done", namespace="/main")
+        self.socketio.emit("mat_stim_done", namespace="/main")
 
 
     def loadStimulus(self, listDir, n=3, demo=False):
@@ -399,14 +419,16 @@ class MatTestThread(Thread):
 
 
     def saveState(self, out="mat_state.pik"):
-        toSave = ['listsRMS', 'y', 'currentList', 'foundSRT', 'slope', 'snr',
-                  'snrTrack', 'direction', 'noise_rms', 'i', 'currentWords',
-                  'usedLists', 'availableSentenceInds', 'trialN',
-                  'listsString', 'noise', 'fs', 'nCorrect', 'loadedLists',
-                  'lists', 'listN', 'wordsCorrect']
+        toSave = ['listsRMS', 'y', 'currentList', 'slope', 'snr', 'snrTrack',
+                  'direction', 'noise_rms', 'i', 'currentWords', 'usedLists',
+                  'availableSentenceInds', 'trialN', 'listsString', 'noise',
+                  'fs', 'nCorrect', 'loadedLists', 'lists', 'listN',
+                  'wordsCorrect']
         saveDict = {k:self.__dict__[k] for k in toSave}
         with open(out, 'wb') as f:
             dill.dump(saveDict, f)
+        if self.participant:
+            self.participant['adaptive_matrix_data'].update(saveDict)
 
 
     def manualSave(self, msg):
@@ -431,4 +453,4 @@ class MatTestThread(Thread):
         '''
         This function is called when the thread starts
         '''
-        self.testLoop()
+        return self.testLoop()

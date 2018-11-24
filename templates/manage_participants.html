@@ -81,7 +81,7 @@ $(document).ready(function(){
             handedness: $('#handedness').val(),
             general_notes: $('#general_notes').val()
         }
-        socket.emit('update_participant', form_data);
+        socket.emit('update_participant_info', form_data);
     });
 
     $('#delete').click(function(event) {
