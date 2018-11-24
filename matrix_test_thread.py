@@ -8,6 +8,7 @@ import os
 import random
 from scipy.optimize import minimize
 import csv
+from shutil import copy2
 
 from pysndfile import sndio
 from matrix_test.filesystem import globDir
@@ -48,6 +49,7 @@ class MatTestThread(Thread):
         self.participant=participant
         self.newResp = False
         self.foundSRT = False
+        self.finalised = False
         self.pageLoaded = False
         self.clinPageLoaded = False
         self.partPageLoaded = False
@@ -59,6 +61,7 @@ class MatTestThread(Thread):
         self.socketio.on_event('load_file_dialog_resp', self.loadStateSocketHandle, namespace='/main')
         self.socketio.on_event('repeat_stimulus', self.playStimulusSocketHandle, namespace='/main')
         self.socketio.on_event('finish_test', self.finishTestEarly, namespace='/main')
+        self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
 
         self.listN = listN
         self.loadedLists = []
@@ -70,6 +73,8 @@ class MatTestThread(Thread):
         self.fs = None
 
         self.response = ['','','','','']
+        self.responses = []
+        self.presentedWords = []
         self.nCorrect = None
         self.snr = 0.0
         self.direction = 0
@@ -98,9 +103,9 @@ class MatTestThread(Thread):
 
         if self.participant:
             folder = self.participant.data_paths['adaptive_matrix_data']
-            self.backupFilepath=os.path.join(folder, 'mat_state.pik')
+            self.backupFilepath=os.path.join(folder, 'mat_state.pkl')
         else:
-            self.backupFilepath='./mat_state.pik'
+            self.backupFilepath='./mat_state.pkl'
 
         # If loading session from file, load session variables from the file
         if sessionFilepath:
@@ -133,6 +138,7 @@ class MatTestThread(Thread):
             self.waitForPageLoad()
             self.plotSNR()
             self.fitLogistic()
+            self.waitForFinalise()
 
 
     def finishTestEarly(self):
@@ -156,6 +162,26 @@ class MatTestThread(Thread):
             self.socketio.emit("check-loaded", namespace='/main')
             self._stopevent.wait(0.5)
         return
+
+    def waitForFinalise(self):
+        while not self.finalised and not self._stopevent.isSet():
+            self._stopevent.wait(0.2)
+        return
+
+
+    def finaliseResults(self):
+        toSave = ['snrTrack', 'trialN', 'wordsCorrect', 'presentedWords', 'responses']
+        saveDict = {k:self.__dict__[k] for k in toSave}
+        if self.participant:
+            self.participant['adaptive_matrix_data'].update(saveDict)
+            self.participant.save("adaptive_matrix_data")
+            backup_path = os.path.join(self.participant.data_paths['adaptive_matrix_data'],
+                         'finalised_backup.pkl')
+            copy2(self.backupFilepath, backup_path)
+        else:
+            copy2(self.backupFilepath, './finalised_backup.pkl')
+        self.finalised = True
+
 
 
     @staticmethod
@@ -280,6 +306,8 @@ class MatTestThread(Thread):
     def calcSNR(self):
         '''
         '''
+        self.presentedWords.append(self.currentWords)
+        self.responses.append(self.response)
         correct = np.array([x == y for x, y in zip(self.currentWords, self.response)])
         print("Current words: {}".format(self.currentWords))
         print("Response: {}".format(self.response))
@@ -418,17 +446,15 @@ class MatTestThread(Thread):
         self.newResp = True
 
 
-    def saveState(self, out="mat_state.pik"):
+    def saveState(self, out="mat_state.pkl"):
         toSave = ['listsRMS', 'y', 'currentList', 'slope', 'snr', 'snrTrack',
                   'direction', 'noise_rms', 'i', 'currentWords', 'usedLists',
                   'availableSentenceInds', 'trialN', 'listsString', 'noise',
                   'fs', 'nCorrect', 'loadedLists', 'lists', 'listN',
-                  'wordsCorrect']
+                  'wordsCorrect', 'responses', 'presentedWords']
         saveDict = {k:self.__dict__[k] for k in toSave}
         with open(out, 'wb') as f:
             dill.dump(saveDict, f)
-        if self.participant:
-            self.participant['adaptive_matrix_data'].update(saveDict)
 
 
     def manualSave(self, msg):

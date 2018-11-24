@@ -271,12 +271,12 @@ def start_backup_mat_test(msg):
     if part_key != "--":
         participant = participants[part_key]
         folder = participant.data_paths["adaptive_matrix_data"]
-        backupPath = os.path.join(folder, "mat_state.pik")
+        backupPath = os.path.join(folder, "mat_state.pkl")
     else:
         participant = None
-        backupPath = './mat_state.pik'
+        backupPath = './mat_state.pkl'
 
-    run_matrix_thread(sessionFilepath=backupPath)
+    run_matrix_thread(sessionFilepath=backupPath, participant=participant)
 
 
 @socketio.on('load_mat_session', namespace='/main')
@@ -284,7 +284,7 @@ def start_saved_mat_test(msg):
     '''
     Relay test start message to participant view
     '''
-    filepath = webview.create_file_dialog(dialog_type=webview.OPEN_DIALOG, file_types=("Python Pickle (*.pik)",))
+    filepath = webview.create_file_dialog(dialog_type=webview.OPEN_DIALOG, file_types=("Python Pickle (*.pkl)",))
     if filepath and len(filepath) > 0:
         filepath = filepath[0]
         if isinstance(filepath, bytes):
@@ -330,15 +330,15 @@ def checkMatProcessingStatus():
 def openSaveFileDialog():
     # Open a file dialog interface for selecting a directory
     filepath = webview.create_file_dialog(dialog_type=webview.SAVE_DIALOG,
-                                          file_types=("Python Pickle (*.pik)",),
-                                          save_filename="test_session.pik")
+                                          file_types=("Python Pickle (*.pkl)",),
+                                          save_filename="test_session.pkl")
     if filepath and len(filepath) > 0:
         filepath = filepath[0]
         if isinstance(filepath, bytes):
             filepath = filepath.decode("utf-8")
         # Make sure file ends with pickle file extension
         head, tail = os.path.splitext(filepath)
-        filepath = head + ".pik"
+        filepath = head + ".pkl"
         # Send message with selected directory to the GUI
         socketio.emit('save_file_dialog_resp', {'data': filepath}, namespace='/main', broadcast=True, include_self=True)
 
@@ -346,7 +346,7 @@ def openSaveFileDialog():
 @socketio.on('open_load_file_dialog', namespace='/main')
 def openLoadFileDialog():
     # Open a file dialog interface for selecting a directory
-    filepath = webview.create_file_dialog(dialog_type=webview.OPEN_DIALOG, file_types=("Python Pickle (*.pik)",))
+    filepath = webview.create_file_dialog(dialog_type=webview.OPEN_DIALOG, file_types=("Python Pickle (*.pkl)",))
     if filepath and len(filepath) > 0:
         filepath = filepath[0]
         if isinstance(filepath, bytes):
