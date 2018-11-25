@@ -67,7 +67,7 @@ class Participant:
                 "notes": ''
             },
 
-            "eeg_test": {
+            "eeg_test_data": {
                 "notes": ''
             },
 
@@ -87,7 +87,9 @@ class Participant:
     def generate_folder_hierachy(self):
         '''
         '''
-        sub_dirs = ["adaptive_matrix_data", "da_data", "pta_data", "click_data", "info", "set_matrix_data"]
+        sub_dirs = ["adaptive_matrix_data", "da_data", "pta_data",
+                    "click_data", "info", "set_matrix_data", "eeg_train_data",
+                    "eeg_test_data"]
         for dir_name in sub_dirs:
             path = os.path.join(self.participant_dir, dir_name)
             dir_must_exist(path)

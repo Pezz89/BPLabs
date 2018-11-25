@@ -77,6 +77,9 @@ def fitLogistic():
     snr_50, s_50 = res.x
     x_y = logisticFunction(x, snr_50, s_50)
     x_y *= 100.
+    print(snr_50)
+    print(s_50)
+    exit()
 
     plt.clf()
     axes = plt.gca()

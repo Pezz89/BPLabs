@@ -101,6 +101,8 @@ class MatTestThread(Thread):
         self.snrTrack[0] = 0.0
         # Count number of presented trials
         self.trialN = 1
+        self.srt_50 = None
+        self.s_50 = None
 
         self.currentList = None
         self.availableSentenceInds = []
@@ -186,7 +188,7 @@ class MatTestThread(Thread):
 
 
     def finaliseResults(self):
-        toSave = ['snrTrack', 'trialN', 'wordsCorrect', 'presentedWords', 'responses']
+        toSave = ['snrTrack', 'trialN', 'wordsCorrect', 'presentedWords', 'responses', 'srt_50', 's_50']
         saveDict = {k:self.__dict__[k] for k in toSave}
         if self.participant:
             self.participant['adaptive_matrix_data'].update(saveDict)
@@ -251,8 +253,8 @@ class MatTestThread(Thread):
         sortedSNR = self.trackSNR[sortedSNRind]
         sortedPC = percent_correct[sortedSNRind]
         x = np.linspace(np.min(sortedSNR)-5, np.max(sortedSNR)+3, 3000)
-        snr_50, s_50 = res.x
-        x_y = self.logisticFunction(x, snr_50, s_50)
+        srt_50, s_50 = res.x
+        x_y = self.logisticFunction(x, srt_50, s_50)
         x_y *= 100.
         # np.savez('./plot.npz', x, x_y*100., sortedSNR, sortedPC)
 
@@ -269,26 +271,27 @@ class MatTestThread(Thread):
         plt.title("Predicted psychometric function")
         plt.xlabel("SNR (dB)")
         plt.ylabel("% Correct")
-        srtLine, = axes.plot([snr_50,snr_50], [-50,50.], 'r--')
-        axes.plot([-50.,snr_50], [50.,50.], 'r--')
+        srtLine, = axes.plot([srt_50,srt_50], [-50,50.], 'r--')
+        axes.plot([-50.,srt_50], [50.,50.], 'r--')
         plt.xlim(x.min(), x.max())
         plt.ylim(x_y.min(), x_y.max())
         plt.yticks(np.arange(5)*25.)
         x_vals = np.array(axes.get_xlim())
         s_50 *= 100.
-        b = 50. - s_50 * snr_50
+        b = 50. - s_50 * srt_50
         y_vals = s_50 * x_vals + b
         slopeLine, = axes.plot(x_vals, y_vals, '--')
         ticks = (np.arange((x.max()-x.min())/2.5)*2.5)+(2.5 * round(float(x.min())/2.5))
-        ticks[find_nearest_idx(ticks, snr_50)] = snr_50
+        ticks[find_nearest_idx(ticks, srt_50)] = srt_50
         labels = ["{:.2f}".format(x) for x in ticks]
         plt.xticks(ticks, labels)
-        plt.legend((psycLine, srtLine, slopeLine), ("Psychometric function", "SRT={:.2f}dB".format(snr_50), "Slope={:.2f}%/dB".format(s_50)))
+        plt.legend((psycLine, srtLine, slopeLine), ("Psychometric function", "SRT={:.2f}dB".format(srt_50), "Slope={:.2f}%/dB".format(s_50)))
         dpi = 300
         plt.savefig(self.img, format='png', figsize=(800/dpi, 800/dpi), dpi=dpi)
         self.img.seek(0)
         plot_url = base64.b64encode(self.img.getvalue()).decode()
         plot_url = "data:image/png;base64,{}".format(plot_url)
+        self.srt_50, self.s_50 = srt_50, s_50
         self.socketio.emit("mat_mle_plot_ready", {'data': plot_url}, namespace="/main")
 
 
@@ -469,7 +472,7 @@ class MatTestThread(Thread):
                   'direction', 'noise_rms', 'i', 'currentWords', 'usedLists',
                   'availableSentenceInds', 'trialN', 'listsString', 'noise',
                   'fs', 'nCorrect', 'loadedLists', 'lists', 'listN',
-                  'wordsCorrect', 'responses', 'presentedWords']
+                  'wordsCorrect', 'responses', 'presentedWords', 'srt_50', 's_50']
         saveDict = {k:self.__dict__[k] for k in toSave}
         with open(out, 'wb') as f:
             dill.dump(saveDict, f)
