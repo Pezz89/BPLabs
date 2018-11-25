@@ -10,3 +10,5 @@ server = Flask(__name__)
 server.config["SEND_FILE_MAX_AGE_DEFAULT"] = 1  # disable caching
 socketio = SocketIO(async_mode='threading')
 socketio.init_app(server)
+
+participants = {}

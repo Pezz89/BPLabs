@@ -180,6 +180,8 @@ class MatTestThread(Thread):
             copy2(self.backupFilepath, backup_path)
         else:
             copy2(self.backupFilepath, './finalised_backup.pkl')
+            with open('./Matrix_test_results.pkl', 'wb') as f:
+                dill.dump(saveDict, f)
         self.finalised = True
 
 

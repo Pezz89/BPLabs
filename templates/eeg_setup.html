@@ -12,18 +12,14 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="open-mat-folder-container">Matrix data folder: </label>
+                <label for="open-mat-folder-container">Behavioral test data:</label>
                 <br>
-                <input type="text" id="mat-dir" name='mat_dir' value="./matrix_test/speech_components/" style="width:85%"></input>
-                <button type="button" id="mat-dir-button"  class="btn btn-primary">Browse...</button>
-            </div>
-            <div class="form-group">
-                <label for="listN">Number of lists:</label>
-                <br>
-                <input id="listN" name="listN" type="number" value="3" max="18" min="1" style="width:85%">
+                <input type="text" id="behav_res" name='behav_res' value="./Matrix_test_results.pkl" style="width:85%"></input>
+                <button type="button" id="behav_res_button"  class="btn btn-primary">Browse...</button>
             </div>
             <div class="form-group d-flex justify-content-center">
-                <button type="button" id="submit" class="btn btn-primary mx-3">Start new test</button>
+                <button type="button" id="start_eeg_train" class="btn btn-primary mx-3">Start training data collection</button>
+                <button type="button" id="start_eeg_test" class="btn btn-primary mx-3">Start test data collection</button>
                 <button type="button" id="load-saved" class="btn btn-primary mx-3">Load saved session</button>
                 <button type="button" id="load-backup" class="btn btn-primary mx-3">Load previous automatic backup</button>
             </div>
@@ -36,21 +32,28 @@
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
 
         $('#load-backup').click(function(event) {
-            socket.emit('load_mat_backup', {part_key: $("#participant").val()});
+            // Send message to call stimulus generation function in Python
+            socket.emit('load_eeg_backup', {part_key: $("#participant").val()});
             return false;
         })
         $('#load-saved').click(function(event) {
-            socket.emit('load_mat_session', {part_key: $("#participant").val()});
+            // Send message to call stimulus generation function in Python
+            socket.emit('load_eeg_session', {part_key: $("#participant").val()});
             return false;
         })
-        $('#submit').click(function(event) {
-            socket.emit('start_mat_test', {listN: $("#listN").val(), part_key: $("#participant").val()});
+        $('#start_eeg_train').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('start_eeg_train', {part_key: $("#participant").val()});
+            return false;
+        })
+        $('#start_eeg_test').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('start_eeg_test', {part_key: $("#participant").val()});
             return false;
         })
 
         socket.on('participant_start_mat', function(msg) {
-            // Set form test to filepath returned by dialog
-            window.location.href = '/matrix_test/clinician/control';
+            window.location.href = '/eeg/clinician/control';
         });
 
 
@@ -61,13 +64,13 @@
 
         $('#mat-dir-button').click(function(event) {
             // Send message to call stimulus generation function in Python
-            socket.emit('open_mat_dialog');
+            socket.emit('open_eeg_dialog');
             return false;
         })
 
-        socket.on('mat-dialog-resp', function(msg) {
+        socket.on('eeg-dialog-resp', function(msg) {
             // Set form test to filepath returned by dialog
-            document.getElementById("mat-dir").value = msg.data
+            document.getElementById("eeg-dir").value = msg.data
         });
     });
 </script>

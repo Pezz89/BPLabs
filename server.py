@@ -32,13 +32,8 @@ from matrix_test_thread import MatTestThread
 from pathops import dir_must_exist
 from participant import Participant
 
-import config
-
-server = config.server
-socketio = config.socketio
-
-participants = {}
-
+from config import server, socketio, participants
+from route import *
 
 class StimGenThread(Thread):
     '''
@@ -78,321 +73,32 @@ def run_matrix_thread(listN=None, sessionFilepath=None, participant=None):
                               participant=participant)
     matThread.start()
 
+def run_eeg_train(sessionFilepath=None, participant=None):
+    global eegTrainThread
+    if 'matThread' in globals():
+        if matThread.isAlive() and isinstance(matThread, MatTestThread):
+            matThread.join()
+    matThread = MatTestThread(socketio=socketio, listN=listN,
+                              sessionFilepath=sessionFilepath,
+                              participant=participant)
+    matThread.start()
+
+def run_eeg_test(sessionFilepath=None, participant=None):
+    global eegTestThread
+    if 'eegTestThread' in globals():
+        if eegTestThread.isAlive() and isinstance(eegTestThread, EEGTestThread):
+            eegTestThread.join()
+    eegTestThread = EEGTestThread(socketio=socketio, listN=listN,
+                              sessionFilepath=sessionFilepath,
+                              participant=participant)
+    eegTestThread.start()
+
 
 @server.after_request
 def add_header(response):
     # Disable caching? unsure why...
     response.headers['Cache-Control'] = 'no-store'
     return response
-
-
-@server.route("/")
-def landing():
-    """
-    Render index.html
-    """
-    return render_template("index.html")
-
-
-@server.route("/choose/path")
-def choose_path():
-    """
-    Invokes a folder selection dialog
-    """
-    dirs = webview.create_file_dialog(webview.FOLDER_DIALOG)
-    if dirs and len(dirs) > 0:
-        directory = dirs[0]
-        if isinstance(directory, bytes):
-            directory = directory.decode("utf-8")
-
-        response = {"status": "ok", "directory": directory}
-    else:
-        response = {"status": "cancel"}
-
-    return jsonify(response)
-
-
-@server.route("/fullscreen")
-def fullscreen():
-    webview.toggle_fullscreen()
-    return jsonify({})
-
-@server.route('/participant/manage')
-def manage_participant_page():
-    # Find all pre-existing participants
-    participants = find_participants()
-    return render_template("manage_participants.html", part_keys=participants.keys())
-
-@socketio.on('delete_participant', namespace='/main')
-def manage_participant_delete(participant_str):
-    shutil.rmtree(participants[participant_str].participant_dir)
-    del participants[participant_str]
-    return render_template("manage_participants.html", part_keys=participants.keys())
-
-@socketio.on('update_participant_info', namespace='/main')
-def manage_participant_save(data):
-    key = "participant_{}".format(data['number'])
-    participants[key].set_info(data)
-    participants[key].save("info")
-
-@socketio.on('get_part_info', namespace='/main')
-def get_participant_info(key):
-    socketio.emit('part_info', participants[key]['info'], namespace='/main')
-
-@server.route('/participant/create')
-def create_participant_page():
-    # Find all pre-existing participants
-    participants = find_participants()
-    part_num = gen_participant_num(participants)
-    return render_template("create_participant.html", num=part_num)
-
-def find_participants(folder='./participant_data/'):
-    '''
-    Returns a tuple of (participant number, participant filepath) for every
-    participant folder found in directory provided
-    '''
-    part_folder = [os.path.join(folder, o) for o in os.listdir(folder)
-                        if os.path.isdir(os.path.join(folder,o))]
-    for path in part_folder:
-        part_key = os.path.basename(path)
-        participants[part_key] = Participant(participant_dir=path)
-        participants[part_key].load('info')
-    return participants
-
-def gen_participant_num(participants, N = 100):
-    # generate array of numbers that haven't been taken between 0-100
-    # if list is empty increment until list isnt empty
-    # Choose a number
-    taken_nums = []
-    for part_key in participants.keys():
-        participant = participants[part_key]
-        taken_nums.append(participant['info']['number'])
-    n = 0
-    num_found = False
-    while not num_found:
-        potential_nums = np.arange(N)+n+1
-        try:
-            valid_nums = np.setdiff1d(potential_nums, taken_nums)
-        except:
-            set_trace()
-        if valid_nums.size:
-            num_found = True
-        else:
-            n += N
-    return np.random.choice(valid_nums)
-
-@server.route('/participant/create/submit', methods=["POST"])
-def create_participant_submit():
-    data = request.form
-    key = "participant_{}".format(data['number'])
-    participants[key] = Participant(participant_dir="./participant_data/{}".format(key), **data)
-    participants[key].save("info")
-    return render_template("manage_participants.html", part_keys = participants.keys())
-
-@server.route('/participant_home')
-def participant_homepage():
-    title = "Welcome"
-    paragraph = [
-        "Please wait while the experimenter sets up the test..."
-    ]
-
-    try:
-        return render_template("participant_home.html", title = title, paragraph=paragraph)
-    except Exception as e:
-        return str(e)
-
-
-@server.route('/home')
-def homepage():
-    title = "Welcome"
-    paragraph = [
-        "This is the clinician view. Use the dropdown menus to access controls "
-        "and feedback for the various tests available.",
-        "This web app was developed for the generation of stimulus and "
-        "running of experiments for the PhD project \"Predicting speech "
-        "in noise performance using evoked responses\"."
-    ]
-
-    try:
-        return render_template("home.html", title = title, paragraph=paragraph)
-    except Exception as e:
-        return str(e)
-
-
-@server.route('/matrix_test')
-def matrix_test_setup():
-    participants = find_participants()
-    return render_template("matrix_test_setup.html", part_keys=participants.keys())
-
-@server.route('/matrix_test/run')
-def run_matrix_test():
-    return render_template("mat_test_run.html")
-
-@server.route('/matrix_test/complete')
-def mat_end():
-    return render_template("mat_test_end.html")
-
-@server.route('/matrix_test/clinician/control')
-def clinician_control_mat():
-    return render_template("mat_test_clinician_view.html")
-
-@server.route('/matrix_test/clinician/complete')
-def clinician_mat_end():
-    return render_template("mat_test_clinician_end.html")
-
-@server.route('/matrix_test/stimulus_generation')
-def matDecStim():
-    return render_template("matrix_decode_stim.html")
-
-@socketio.on('start_mat_test', namespace='/main')
-def start_mat_test(msg):
-    '''
-    Relay test start message to participant view
-    '''
-    socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
-    listN = int(msg['listN'])
-    part_key = msg['part_key']
-
-    if part_key != "--":
-        participant = participants[part_key]
-    else:
-        participant = None
-
-    run_matrix_thread(listN=listN, participant=participant)
-
-
-@socketio.on('load_mat_backup', namespace='/main')
-def start_backup_mat_test(msg):
-    '''
-    Relay test start message to participant view
-    '''
-    socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
-    part_key = msg['part_key']
-    if part_key != "--":
-        participant = participants[part_key]
-        folder = participant.data_paths["adaptive_matrix_data"]
-        backupPath = os.path.join(folder, "mat_state.pkl")
-    else:
-        participant = None
-        backupPath = './mat_state.pkl'
-
-    run_matrix_thread(sessionFilepath=backupPath, participant=participant)
-
-
-@socketio.on('load_mat_session', namespace='/main')
-def start_saved_mat_test(msg):
-    '''
-    Relay test start message to participant view
-    '''
-    filepath = webview.create_file_dialog(dialog_type=webview.OPEN_DIALOG, file_types=("Python Pickle (*.pkl)",))
-    if filepath and len(filepath) > 0:
-        filepath = filepath[0]
-        if isinstance(filepath, bytes):
-            filepath = filepath.decode("utf-8")
-    else:
-        return None
-
-    part_key = msg['part_key']
-    if part_key != "--":
-        participant = participants[part_key]
-    else:
-        participant = None
-    socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
-    run_matrix_thread(sessionFilepath=filepath, participant=participant)
-
-
-@socketio.on('run_mat_stim_gen', namespace='/main')
-def generateStim(msg):
-    '''
-    When process buton is clicked in GUI, start an asynchronous thread to run
-    process
-    '''
-    global thread
-    n_part = int(msg['n_part'])
-    snr_len = float(msg['snr_len'])
-    snr_num = int(msg['snr_num'])
-    mat_dir = msg['mat_dir']
-    save_dir = msg['save_dir']
-    thread = StimGenThread(n_part, snr_len, snr_num, mat_dir, save_dir, socketio=socketio)
-    thread.start()
-
-
-@socketio.on('check-mat-processing-status', namespace='/main')
-def checkMatProcessingStatus():
-    global thread
-    if thread.is_alive():
-        socketio.emit('mat-processing-status', {'data': True}, namespace='/main')
-    else:
-        socketio.emit('mat-processing-status', {'data': False}, namespace='/main')
-
-
-@socketio.on('open_save_file_dialog', namespace='/main')
-def openSaveFileDialog():
-    # Open a file dialog interface for selecting a directory
-    filepath = webview.create_file_dialog(dialog_type=webview.SAVE_DIALOG,
-                                          file_types=("Python Pickle (*.pkl)",),
-                                          save_filename="test_session.pkl")
-    if filepath and len(filepath) > 0:
-        filepath = filepath[0]
-        if isinstance(filepath, bytes):
-            filepath = filepath.decode("utf-8")
-        # Make sure file ends with pickle file extension
-        head, tail = os.path.splitext(filepath)
-        filepath = head + ".pkl"
-        # Send message with selected directory to the GUI
-        socketio.emit('save_file_dialog_resp', {'data': filepath}, namespace='/main', broadcast=True, include_self=True)
-
-
-@socketio.on('open_load_file_dialog', namespace='/main')
-def openLoadFileDialog():
-    # Open a file dialog interface for selecting a directory
-    filepath = webview.create_file_dialog(dialog_type=webview.OPEN_DIALOG, file_types=("Python Pickle (*.pkl)",))
-    if filepath and len(filepath) > 0:
-        filepath = filepath[0]
-        if isinstance(filepath, bytes):
-            filepath = filepath.decode("utf-8")
-        if not os.path.isfile(filepath):
-            socketio.emit('main-notification', {'data': "\'{}\' is not a valid file".format(directory)}, namespace='/main')
-        # Send message with selected directory to the GUI
-        socketio.emit('load_file_dialog_resp', {'data': filepath}, namespace='/main', broadcast=True, include_self=True)
-
-
-@socketio.on('open_save_dialog', namespace='/main')
-def openSaveDirDialog():
-    # Open a file dialog interface for selecting a directory
-    dirs = webview.create_file_dialog(webview.FOLDER_DIALOG)
-    if dirs and len(dirs) > 0:
-        directory = dirs[0]
-        if isinstance(directory, bytes):
-            directory = directory.decode("utf-8")
-        if not os.path.isdir(directory):
-            socketio.emit('main-notification', {'data': "\'{}\' is not a valid directory".format(directory)}, namespace='/main')
-            return None
-        # Send message with selected directory to the GUI
-        socketio.emit('save-file-dialog-resp', {'data': directory}, namespace='/main')
-
-
-@socketio.on('open_mat_dialog', namespace='/main')
-def openMatDialog():
-    # Open a file dialog interface for selecting a directory
-    dirs = webview.create_file_dialog(webview.FOLDER_DIALOG)
-    if dirs and len(dirs) > 0:
-        directory = dirs[0]
-        if isinstance(directory, bytes):
-            directory = directory.decode("utf-8")
-        # TODO: Add filepath checking here...
-        # Send message with selected directory to the GUI
-        socketio.emit('mat-dialog-resp', {'data': directory}, namespace='/main')
-
-
-@server.route('/click_stim')
-def clickStim():
-    return render_template("click_stim.html")
-
-
-@server.route('/da_stim')
-def daStim():
-    return render_template("da_stim.html")
 
 
 def set_trace():
