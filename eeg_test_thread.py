@@ -2,7 +2,8 @@ from threading import Thread, Event
 import os
 import numpy as np
 from matrix_test.filesystem import globDir
-from pysndfile import PySndfile
+from pysndfile import PySndfile, sndio
+from random import randint
 
 from scipy.special import logit
 from config import socketio
@@ -159,17 +160,22 @@ class EEGTestThread(Thread):
         s_50 *= 0.01
         x = logit(self.si * 0.01)
         snrs = (x/(4*s_50))+srt_50
-        noise_file = PySnfile(self.noise_path, 'r')
+        noise_file = PySndfile(self.noise_path, 'r')
         for ind, dir_name in enumerate(os.listdir(listDir)):
             stim_dir = os.path.join(listDir, dir_name)
             wav = globDir(stim_dir, "*.wav")[0]
             marker = globDir(stim_dir, "*.csv")[0]
+            rms_file = globDir(stim_dir, "*.npy")[0]
+            speech_rms = float(np.load(rms_file))
             snr = snrs[ind]
             speech, fs, enc, fmt = sndio.read(wav, return_format=True)
-            start = randint(0, noise.frames()-speech.size)
+            start = randint(0, noise_file.frames()-speech.size)
             noise_file.seek(start)
             noise = noise_file.read_frames(speech.size)
-
+            noise_rms = np.sqrt(np.mean(noise**2))
+            snr_fs = 10**(snr/20)
+            noise = noise*(speech_rms/noise_rms)
+            sndio.write(,speech+(noise*snr_fs), fs, enc, fmt)
             set_trace()
 
         # Generate wav files for noise/stim mixtures based on psychometric

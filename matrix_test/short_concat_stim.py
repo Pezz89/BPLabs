@@ -26,17 +26,22 @@ def main():
         dir_must_exist(out_folder)
         out_wav_path = os.path.join(out_folder, "stim.wav")
         out_csv_path = os.path.join(out_folder, "markers.csv")
+        out_rms_path = os.path.join(out_folder, "rms.npy")
         out_wav = PySndfile(out_wav_path, 'w', construct_format('wav', 'pcm16'), 1, 44100)
         list_1_wav = globDir(os.path.join(base_dir, list_folder_1), '*.wav')
         list_2_wav = globDir(os.path.join(base_dir, list_folder_2), '*.wav')
         merged_wavs = list_1_wav + list_2_wav
         shuffle(merged_wavs)
+        sum_sqrd = 0.
+        n = 0
         with open(out_csv_path, 'w') as csvfile:
             writer = csv.writer(csvfile)
             counter = 0
             for wav in merged_wavs:
                 csv_line = [counter]
                 x, fs, enc = sndio.read(wav)
+                sum_sqrd = np.sum(x**2)
+                n += x.size
                 out_wav.write_frames(x)
                 counter += x.size
                 csv_line.append(counter)
@@ -49,6 +54,8 @@ def main():
                 csv_line.append(counter)
                 writer.writerow(csv_line)
                 csv_line.append("Silence")
+            rms = np.sqrt(sum_sqrd/n)
+            np.save(out_rms_path, rms)
 
 if __name__ == "__main__":
     main()
