@@ -16,6 +16,10 @@
         socket.on('participant_start_mat', function() {
             window.location.href = "/matrix_test/run";
         });
+
+        socket.on('participant_start_eeg_test', function() {
+            window.location.href = "/eeg/test/run";
+        });
     });
 </script>
 {% endblock %}

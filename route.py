@@ -124,6 +124,38 @@ def eeg_setup():
     participants = find_participants()
     return render_template("eeg_setup.html", part_keys=participants.keys())
 
+@server.route('/eeg/test/run')
+def eeg_test_run():
+    return render_template("eeg_test_run.html")
+
+@server.route('/eeg/test/complete')
+def eeg_test_end():
+    return render_template("eeg_test_end.html")
+
+@server.route('/eeg/test/clinician/control')
+def eeg_test_clinician_control():
+    return render_template("eeg_test_clinician_view.html")
+
+@server.route('/eeg/test/clinician/complete')
+def eeg_test_clinician_end():
+    return render_template("eeg_test_clinician_end.html")
+
+@server.route('/eeg/train/run')
+def eeg_train_run():
+    return render_template("eeg_train_run.html")
+
+@server.route('/eeg/train/complete')
+def eeg_train_end():
+    return render_template("eeg_train_end.html")
+
+@server.route('/eeg/train/clinician/control')
+def eeg_train_clinician_control():
+    return render_template("eeg_train_clinician_view.html")
+
+@server.route('/eeg/train/clinician/complete')
+def eeg_train_clinician_end():
+    return render_template("eeg_train_clinician_end.html")
+
 '''
 Matrix behavioral test routing
 '''

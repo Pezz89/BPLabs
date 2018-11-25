@@ -15,6 +15,20 @@ from matrix_test.filesystem import globDir
 import sounddevice as sd
 import pdb
 
+from config import socketio
+
+
+def run_matrix_thread(listN=None, sessionFilepath=None, participant=None):
+    global matThread
+    if 'matThread' in globals():
+        if matThread.isAlive() and isinstance(matThread, MatTestThread):
+            matThread.join()
+    matThread = MatTestThread(socketio=socketio, listN=listN,
+                              sessionFilepath=sessionFilepath,
+                              participant=participant)
+    matThread.start()
+
+
 def set_trace():
     import logging
     log = logging.getLogger('werkzeug')
@@ -22,6 +36,8 @@ def set_trace():
     log = logging.getLogger('engineio')
     log.setLevel(logging.ERROR)
     pdb.set_trace()
+
+
 def find_nearest_idx(array, value):
     '''
     Adapted from: https://stackoverflow.com/questions/2566412/find-nearest-value-in-numpy-array

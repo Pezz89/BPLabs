@@ -34,6 +34,7 @@ from participant import Participant
 
 from config import server, socketio, participants
 from route import *
+from socket_handlers import *
 
 class StimGenThread(Thread):
     '''
@@ -62,36 +63,6 @@ class StimGenThread(Thread):
         self.process_stimulus()
         socketio.emit('processing-complete', {'data': ''}, namespace='/main')
 
-
-def run_matrix_thread(listN=None, sessionFilepath=None, participant=None):
-    global matThread
-    if 'matThread' in globals():
-        if matThread.isAlive() and isinstance(matThread, MatTestThread):
-            matThread.join()
-    matThread = MatTestThread(socketio=socketio, listN=listN,
-                              sessionFilepath=sessionFilepath,
-                              participant=participant)
-    matThread.start()
-
-def run_eeg_train(sessionFilepath=None, participant=None):
-    global eegTrainThread
-    if 'matThread' in globals():
-        if matThread.isAlive() and isinstance(matThread, MatTestThread):
-            matThread.join()
-    matThread = MatTestThread(socketio=socketio, listN=listN,
-                              sessionFilepath=sessionFilepath,
-                              participant=participant)
-    matThread.start()
-
-def run_eeg_test(sessionFilepath=None, participant=None):
-    global eegTestThread
-    if 'eegTestThread' in globals():
-        if eegTestThread.isAlive() and isinstance(eegTestThread, EEGTestThread):
-            eegTestThread.join()
-    eegTestThread = EEGTestThread(socketio=socketio, listN=listN,
-                              sessionFilepath=sessionFilepath,
-                              participant=participant)
-    eegTestThread.start()
 
 
 @server.after_request

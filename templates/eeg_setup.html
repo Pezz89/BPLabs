@@ -52,10 +52,9 @@
             return false;
         })
 
-        socket.on('participant_start_mat', function(msg) {
-            window.location.href = '/eeg/clinician/control';
+        socket.on('participant_start_eeg_test', function(msg) {
+            window.location.href = '/eeg/test/clinician/control';
         });
-
 
         socket.on('save-dialog-resp', function(msg) {
             // Set form test to filepath returned by dialog
