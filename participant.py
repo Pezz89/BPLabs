@@ -89,9 +89,10 @@ class Participant:
         '''
         sub_dirs = ["adaptive_matrix_data", "da_data", "pta_data",
                     "click_data", "info", "set_matrix_data", "eeg_train_data",
-                    "eeg_test_data"]
+                    "eeg_test_data", "eeg_test_data/stimulus"]
         for dir_name in sub_dirs:
-            path = os.path.join(self.participant_dir, dir_name)
+            dn = os.path.join(*dir_name.split('/'))
+            path = os.path.join(self.participant_dir, dn)
             dir_must_exist(path)
             self.data_paths[dir_name] = path
 

@@ -3,11 +3,22 @@ import os
 import numpy as np
 from matrix_test.filesystem import globDir
 from pysndfile import PySndfile, sndio
-from random import randint
+from random import randint, shuffle
 
 from scipy.special import logit
 from config import socketio
 import pdb
+
+def roll_independant(A, r):
+    rows, column_indices = np.ogrid[:A.shape[0], :A.shape[1]]
+
+    # Use always a negative shift, so that column_indices are valid.
+    # (could also use module operation)
+    r[r < 0] += A.shape[1]
+    column_indices = column_indices - r[:,np.newaxis]
+
+    result = A[rows, column_indices]
+    return result
 
 def run_eeg_test_thread(sessionFilepath=None, participant=None):
     global eegTestThread
@@ -160,23 +171,33 @@ class EEGTestThread(Thread):
         s_50 *= 0.01
         x = logit(self.si * 0.01)
         snrs = (x/(4*s_50))+srt_50
+        snrs = np.repeat(snrs[np.newaxis], 4, axis=0)
+        snrs = roll_independant(snrs, np.array([0,-1,-2,-3]))
         noise_file = PySndfile(self.noise_path, 'r')
-        for ind, dir_name in enumerate(os.listdir(listDir)):
+        stim_dirs = os.listdir(listDir)
+        shuffle(stim_dirs)
+        for ind, dir_name in enumerate(stim_dirs):
             stim_dir = os.path.join(listDir, dir_name)
             wav = globDir(stim_dir, "*.wav")[0]
             marker = globDir(stim_dir, "*.csv")[0]
             rms_file = globDir(stim_dir, "*.npy")[0]
             speech_rms = float(np.load(rms_file))
-            snr = snrs[ind]
+            snr = snrs[:, ind]
             speech, fs, enc, fmt = sndio.read(wav, return_format=True)
-            start = randint(0, noise_file.frames()-speech.size)
-            noise_file.seek(start)
-            noise = noise_file.read_frames(speech.size)
-            noise_rms = np.sqrt(np.mean(noise**2))
-            snr_fs = 10**(snr/20)
-            noise = noise*(speech_rms/noise_rms)
-            sndio.write(,speech+(noise*snr_fs), fs, enc, fmt)
-            set_trace()
+            for ind2, s in enumerate(snr):
+                start = randint(0, noise_file.frames()-speech.size)
+                noise_file.seek(start)
+                noise = noise_file.read_frames(speech.size)
+                noise_rms = np.sqrt(np.mean(noise**2))
+                snr_fs = 10**(s/20)
+                if snr_fs == np.inf:
+                    snr_fs = 0.
+                elif snr_fs = -np.inf:
+                    raise ValueError("Noise infinitely louder than signal at snr: {}".format(snr)
+                noise = noise*(speech_rms/noise_rms)
+                save_dir = self.participant.data_paths['eeg_test_data/stimulus']
+                out_path = os.path.join(save_dir, "Stim_{0}_{1}.wav".format(ind, ind2))
+                sndio.write(out_path,speech+(noise*snr_fs), fs, fmt, enc)
 
         # Generate wav files for noise/stim mixtures based on psychometric
         # function

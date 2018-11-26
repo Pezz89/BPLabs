@@ -30,14 +30,31 @@ def main():
         out_wav = PySndfile(out_wav_path, 'w', construct_format('wav', 'pcm16'), 1, 44100)
         list_1_wav = globDir(os.path.join(base_dir, list_folder_1), '*.wav')
         list_2_wav = globDir(os.path.join(base_dir, list_folder_2), '*.wav')
+        list_1_csv = globDir(os.path.join(base_dir, list_folder_1), '*.csv')
+        list_2_csv = globDir(os.path.join(base_dir, list_folder_2), '*.csv')
         merged_wavs = list_1_wav + list_2_wav
-        shuffle(merged_wavs)
+        merged_csvs = list_1_csv + list_2_csv
+        words = []
+        for c in merged_csvs:
+            with open(c, 'r') as csvfile:
+                for line in csv.reader(csvfile):
+                    words.append(line)
+        c = list(zip(merged_wavs, words))
+        shuffle(c)
+        merged_wavs, words = zip(*c)
         sum_sqrd = 0.
         n = 0
         with open(out_csv_path, 'w') as csvfile:
             writer = csv.writer(csvfile)
             counter = 0
-            for wav in merged_wavs:
+            for wav, txt in zip(merged_wavs, words):
+                csv_line = [counter]
+                silence = np.zeros(np.random.uniform(int(0.8*44100), int(1.2*44100), 1).astype(int))
+                out_wav.write_frames(silence)
+                counter += silence.size
+                csv_line.append(counter)
+                csv_line.append("#")
+                writer.writerow(csv_line)
                 csv_line = [counter]
                 x, fs, enc = sndio.read(wav)
                 sum_sqrd = np.sum(x**2)
@@ -45,15 +62,15 @@ def main():
                 out_wav.write_frames(x)
                 counter += x.size
                 csv_line.append(counter)
-                csv_line.append("Speech")
+                csv_line.append(" ".join(txt))
                 writer.writerow(csv_line)
-                csv_line = [counter]
-                silence = np.zeros(np.random.uniform(int(0.8*44100), int(1.2*44100), 1).astype(int))
-                out_wav.write_frames(silence)
-                counter += silence.size
-                csv_line.append(counter)
-                writer.writerow(csv_line)
-                csv_line.append("Silence")
+            csv_line = [counter]
+            silence = np.zeros(np.random.uniform(int(0.8*44100), int(1.2*44100), 1).astype(int))
+            out_wav.write_frames(silence)
+            counter += silence.size
+            csv_line.append(counter)
+            csv_line.append("#")
+            writer.writerow(csv_line)
             rms = np.sqrt(sum_sqrd/n)
             np.save(out_rms_path, rms)
 
