@@ -4,6 +4,7 @@ import numpy as np
 from matrix_test.filesystem import globDir
 from pysndfile import PySndfile, sndio
 from random import randint, shuffle
+from shutil import copyfile
 
 from scipy.special import logit
 from config import socketio
@@ -192,12 +193,16 @@ class EEGTestThread(Thread):
                 snr_fs = 10**(s/20)
                 if snr_fs == np.inf:
                     snr_fs = 0.
-                elif snr_fs = -np.inf:
-                    raise ValueError("Noise infinitely louder than signal at snr: {}".format(snr)
+                elif snr_fs == -np.inf:
+                    raise ValueError("Noise infinitely louder than signal at snr: {}".format(snr))
                 noise = noise*(speech_rms/noise_rms)
                 save_dir = self.participant.data_paths['eeg_test_data/stimulus']
-                out_path = os.path.join(save_dir, "Stim_{0}_{1}.wav".format(ind, ind2))
-                sndio.write(out_path,speech+(noise*snr_fs), fs, fmt, enc)
+                out_wav_path = os.path.join(save_dir, "Stim_{0}_{1}.wav".format(ind, ind2))
+                out_meta_path = os.path.join(save_dir, "Stim_{0}_{1}.npy".format(ind, ind2))
+                sndio.write(out_wav_path,speech+(noise*snr_fs), fs, fmt, enc)
+                np.save(out_meta_path, snr)
+            out_csv_path = os.path.join(save_dir, "Marker_{0}.csv".format(ind))
+            copyfile(marker, out_csv_path)
 
         # Generate wav files for noise/stim mixtures based on psychometric
         # function
