@@ -1,7 +1,52 @@
 import numpy as np
 import scipy.signal as sgnl
 import matplotlib.pyplot as plt
+import queue
+import sys
+import threading
 
+import sounddevice as sd
+import soundfile as sf
+
+
+def play_wav(wav_file, buffersize=20, blocksize=1024):
+    q = queue.Queue(maxsize=buffersize)
+    event = threading.Event()
+    def callback(outdata, frames, time, status):
+        assert frames == blocksize
+        if status.output_underflow:
+            print('Output underflow: increase blocksize?', file=sys.stderr)
+            raise sd.CallbackAbort
+        assert not status
+        try:
+            data = q.get_nowait()
+        except queue.Empty:
+            print('Buffer is empty: increase buffersize?', file=sys.stderr)
+            raise sd.CallbackAbort
+        if len(data) < len(outdata):
+            outdata[:len(data)] = data
+            outdata[len(data):] = b'\x00' * (len(outdata) - len(data))
+            raise sd.CallbackStop
+        else:
+            outdata[:] = data
+
+    with sf.SoundFile(wav_file) as f:
+        for _ in range(buffersize):
+            data = f.buffer_read(blocksize, dtype='float32')
+            if not data:
+                break
+            q.put_nowait(data)  # Pre-fill queue
+
+        stream = sd.RawOutputStream(
+            samplerate=f.samplerate, blocksize=blocksize,
+            channels=f.channels, dtype='float32',
+            callback=callback, finished_callback=event.set)
+        with stream:
+            timeout = blocksize * buffersize / f.samplerate
+            while data:
+                data = f.buffer_read(blocksize, dtype='float32')
+                q.put(data, timeout=timeout)
+            event.wait()  # Wait until playback is finished
 
 def rolling_window_lastaxis(a, window):
     """Directly taken from Erik Rigtorp's post to numpy-discussion.

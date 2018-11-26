@@ -41,6 +41,7 @@ $(document).ready(function(){
     socket.on('save_file_dialog_resp', function(msg) {
         socket.emit("save_file_dialog_resp", msg)
     });
+
     socket.on('load_file_dialog_resp', function(msg) {
         socket.emit("load_file_dialog_resp", msg)
     });

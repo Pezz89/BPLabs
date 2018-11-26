@@ -6,6 +6,7 @@ from pysndfile import PySndfile, sndio
 from random import randint, shuffle
 from shutil import copyfile
 
+from matrix_test.signalops import play_wav
 from scipy.special import logit
 from config import socketio
 import pdb
@@ -53,11 +54,18 @@ class EEGTestThread(Thread):
         self.socketio = socketio
         self.noise_path = noiseFilepath
 
+        self.wav_files = []
+        self.marker_files = []
+
+        self.socketio.on_event('eeg_page_loaded', self.setPageLoaded, namespace='/main')
         # Percent speech inteligibility (estimated using behavioural measure)
         # to present stimuli at
         self.si = np.array([20.0, 35.0, 50.0, 65.0, 80.0, 90.0, 100.0])
 
         self.pageLoaded = False
+        self.clinPageLoaded = False
+        self.partPageLoaded = False
+
         self._stopevent = Event()
         # Attach messages from gui to class methods
         if self.participant:
@@ -85,9 +93,11 @@ class EEGTestThread(Thread):
         '''
         self.waitForPageLoad()
         # For each stimulus
-        while not self.foundSRT and not self._stopevent.isSet():
+        for wav in self.wav_files:
+            if self._stopevent.isSet():
+                break
             # Play concatenated matrix sentences at set SNR
-            self.playStimulus()
+            self.playStimulus(wav)
             self.waitForResponse()
             if self._stopevent.isSet():
                 return
@@ -154,14 +164,15 @@ class EEGTestThread(Thread):
         return 1./(1.+np.exp(4.*s_50*(L_50-L)))
 
 
-    def playStimulus(self, replay=False):
+    def playStimulus(self, wav_file, replay=False):
         self.newResp = False
-        self.socketio.emit("mat_stim_playing", namespace="/main")
-        if not replay:
-            self.y = self.generateTrial(self.snr)
+        self.socketio.emit("eeg_stim_playing", namespace="/main")
+        # if not replay:
+        #     self.y = self.generateTrial(self.snr)
         # Play audio
-        sd.play(self.y, self.fs, blocking=True)
-        self.socketio.emit("mat_stim_done", namespace="/main")
+        # sd.play(self.y, self.fs, blocking=True)
+        play_wav(wav_file)
+        self.socketio.emit("eeg_stim_done", namespace="/main")
 
 
     def loadStimulus(self, listDir, srt_50, s_50):
@@ -177,6 +188,7 @@ class EEGTestThread(Thread):
         noise_file = PySndfile(self.noise_path, 'r')
         stim_dirs = os.listdir(listDir)
         shuffle(stim_dirs)
+        self.socketio.emit('eeg_test_stim_load', namespace='/main')
         for ind, dir_name in enumerate(stim_dirs):
             stim_dir = os.path.join(listDir, dir_name)
             wav = globDir(stim_dir, "*.wav")[0]
@@ -201,9 +213,15 @@ class EEGTestThread(Thread):
                 out_meta_path = os.path.join(save_dir, "Stim_{0}_{1}.npy".format(ind, ind2))
                 sndio.write(out_wav_path,speech+(noise*snr_fs), fs, fmt, enc)
                 np.save(out_meta_path, snr)
-            out_csv_path = os.path.join(save_dir, "Marker_{0}.csv".format(ind))
+                self.wav_files.append(out_wav_path)
+                out_csv_path = os.path.join(save_dir, "Marker_{0}.csv".format(ind))
+                self.marker_files.append(out_csv_path)
             copyfile(marker, out_csv_path)
 
+        self.socketio.emit('eeg_test_ready', namespace='/main')
+        c = list(zip(self.wav_files, self.marker_files))
+        shuffle(c)
+        self.wav_files, self.marker_files = zip(*c)
         # Generate wav files for noise/stim mixtures based on psychometric
         # function
 

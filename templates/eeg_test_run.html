@@ -1,3 +1,31 @@
 {% extends 'participant_index.html' %}
 {% block content %}
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+<div id="overlay">
+    <span id="overlay_crosshair">&#10010;</span>
+</div> 
+<script>
+    $(document).ready(function(){
+        // Initialise socketio with a namespace called "main"
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+        waitingDialog.show('Loading... Please wait');
+        socket.on('eeg_test_ready', function(msg) {
+            waitingDialog.hide();
+            on();
+        });
+
+        socket.on('check-loaded', function(msg) {
+            socket.emit('eeg_page_loaded', {data: "participant"});
+        });
+
+        function on() {
+            document.getElementById("overlay").style.display = "table-cell";
+            document.getElementById("overlay_crosshair").style.display = "inline";
+        }
+
+        function off() {
+            document.getElementById("overlay").style.display = "none";
+        } 
+    });
+</script>
 {% endblock %}

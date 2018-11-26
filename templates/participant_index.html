@@ -6,6 +6,7 @@
     <script src="http://code.highcharts.com/highcharts.js"></script>
     <script type="text/javascript" src = "/static/bootstrap.min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+    <script type="text/javascript" src="/static/bower_components/bootstrap-waitingfor/build/bootstrap-waitingfor.js"></script>
 
     <style>
         .mat_grid > button {
@@ -75,9 +76,6 @@
             window.location.href = '/matrix_test/complete';
         });
 
-        socket.on('check-loaded', function(msg) {
-            socket.emit('mat_page_loaded', {data: "participant"});
-        });
     });
     </script>
 </body>
