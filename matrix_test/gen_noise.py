@@ -190,13 +190,17 @@ def calc_spectrum(files, silences, fs=44100, plot=False):
 def gen_noise(OutDir, b, fs):
     print("Generating noise...")
     # Generate 10 minutes of white noise
-    x = np.random.randn(int(fs*60.*20.))
+    x = np.random.randn(int(fs*60.*10.))
     x /= x.max()
     noiseDir = os.path.join(OutDir, 'wav')
+    noiseDir = os.path.join(OutDir, 'rms')
     dir_must_exist(noiseDir)
     noiseDir = os.path.join(noiseDir, 'noise')
     dir_must_exist(noiseDir)
     y = block_lfilter_wav(b, [1.0], x, os.path.join(noiseDir, 'noise.wav'), 65538, 44100)
+    noise_rms_path = os.path.join(noiseDir, 'noise_rms.npy')
+    rms = np.mean(np.sqrt(y**2))
+    np.save(noise_rms_path, rms)
     return y
 
 
@@ -211,11 +215,11 @@ if __name__ == "__main__":
                         help='Matrix test speech data location')
     parser.add_argument('--OutDir', type=PathType(exists=None, type='dir'),
                         default='./stimulus', help='Output directory')
-    parser.add_argument('--SkipRMS', action='store_true')
+    parser.add_argument('--CalcRMS', action='store_true')
     args = {k:v for k,v in vars(parser.parse_args()).items() if v is not None}
 
     rmsDir = os.path.join(args['OutDir'], "rms")
-    if not args['SkipRMS']:
+    if args['CalcRMS']:
         indexes = gen_indexes()
         wavFiles = gen_audio_stim(args['MatrixDir'], args['OutDir'], indexes)
         rmsFiles = gen_rms(wavFiles, rmsDir)

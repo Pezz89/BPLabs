@@ -21,10 +21,20 @@ $(document).ready(function(){
     // Initialise socketio with a namespace called "main"
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
 
+    var finalised=0;
+    window.onbeforeunload = confirmExit;
+    function confirmExit() {
+        if (formmodified == 0) {
+            return "New information not saved. Do you wish to leave the page?";
+        }
+    }
+
     $('#mat-save').click(function(event) {
         socket.emit("finalise_results")
+        finalised=1;
         window.location.href = '/home';
     });
+
     $('#mat-repeat').click(function(event) {
         socket.emit("repeat_stimulus")
     });
@@ -44,10 +54,6 @@ $(document).ready(function(){
 
     socket.on('load_file_dialog_resp', function(msg) {
         socket.emit("load_file_dialog_resp", msg)
-    });
-
-    socket.on('check-loaded', function(msg) {
-        socket.emit('mat_page_loaded', {data: "clinician"});
     });
 });
 </script>

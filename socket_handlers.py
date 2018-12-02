@@ -30,6 +30,12 @@ from matrix_test_thread import run_matrix_thread
 from eeg_test_thread import run_eeg_test_thread
 from eeg_train_thread import run_eeg_train_thread
 
+thread_runners = {
+    "eeg_test": run_eeg_test_thread,
+    "eeg_train": run_eeg_train_thread,
+    "mat": run_matrix_thread
+}
+
 '''
 Generic socket handlers
 '''
@@ -160,6 +166,21 @@ def start_saved_eeg_train(msg):
 '''
 EEG test socket handlers
 '''
+
+@socketio.on('start_test', namespace='/main')
+def start_test(msg):
+    test_name = msg.pop('test_name')
+    part_key = msg.pop('part_key')
+    thread_runner = thread_runners[test_name]
+    socketio.emit('participant_start_{}'.format(test_name), namespace='/main')
+
+    if part_key != "--":
+        participant = participants[part_key]
+    else:
+        raise ValueError("Participant must be selected...")
+
+    thread_runner(participant=participant, **msg)
+
 @socketio.on('start_eeg_test', namespace='/main')
 def start_eeg_test(msg):
     '''

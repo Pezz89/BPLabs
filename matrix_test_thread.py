@@ -10,7 +10,7 @@ from scipy.optimize import minimize
 import csv
 from shutil import copy2
 
-from pysndfile import sndio
+from pysndfile import sndio, PySndfile
 from matrix_test.filesystem import globDir
 import sounddevice as sd
 import pdb
@@ -18,7 +18,7 @@ import pdb
 from config import socketio
 
 
-def run_matrix_thread(listN=None, sessionFilepath=None, participant=None):
+def run_matrix_thread(listN=3, sessionFilepath=None, participant=None):
     global matThread
     if 'matThread' in globals():
         if matThread.isAlive() and isinstance(matThread, MatTestThread):
@@ -59,8 +59,11 @@ class MatTestThread(Thread):
     '''
     Thread for running server side matrix test operations
     '''
-    def __init__(self, listN=3, sessionFilepath=None, noiseFilepath="./matrix_test/stimulus/wav/noise/noise.wav",
-        listFolder="./matrix_test/stimulus/wav/sentence-lists/", socketio=None, participant=None):
+    def __init__(self, listN=3, sessionFilepath=None,
+                 noiseFilepath="./matrix_test/stimulus/wav/noise/noise.wav",
+                 noiseRMSFilepath="./matrix_test/stimulus/rms/noise/noise_rms.npy",
+                 listFolder="./matrix_test/stimulus/wav/sentence-lists/",
+                 socketio=None, participant=None):
         super(MatTestThread, self).__init__()
         self.participant=participant
         self.newResp = False
@@ -72,14 +75,14 @@ class MatTestThread(Thread):
         self.socketio = socketio
         # Attach messages from gui to class methods
         self.socketio.on_event('submit_mat_response', self.submitMatResponse, namespace='/main')
-        self.socketio.on_event('mat_page_loaded', self.setPageLoaded, namespace='/main')
+        self.socketio.on_event('page_loaded', self.setPageLoaded, namespace='/main')
         self.socketio.on_event('save_file_dialog_resp', self.manualSave, namespace='/main')
         self.socketio.on_event('load_file_dialog_resp', self.loadStateSocketHandle, namespace='/main')
         self.socketio.on_event('repeat_stimulus', self.playStimulusSocketHandle, namespace='/main')
         self.socketio.on_event('finish_test', self.finishTestEarly, namespace='/main')
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
 
-        self.listN = listN
+        self.listN = int(listN)
         self.loadedLists = []
         self.lists = []
         self.listsRMS = []
@@ -128,10 +131,11 @@ class MatTestThread(Thread):
         # If loading session from file, load session variables from the file
         if sessionFilepath:
             self.loadState(sessionFilepath)
+            self.loadNoise(noiseFilepath, noiseRMSFilepath)
         else:
             # Preload audio at start of the test
             self.loadStimulus(listFolder, n=self.listN)
-            self.loadNoise(noiseFilepath)
+            self.loadNoise(noiseFilepath, noiseRMSFilepath)
 
 
     def testLoop(self):
@@ -413,13 +417,12 @@ class MatTestThread(Thread):
         random.shuffle(self.availableSentenceInds)
 
 
-    def loadNoise(self, noiseFilepath):
+    def loadNoise(self, noiseFilepath, noiseRMSFilepath):
         '''
         Read noise samples and calculate the RMS of the signal
         '''
-        x, _, _ = sndio.read(noiseFilepath)
-        self.noise = x
-        self.noise_rms = np.sqrt(np.mean(self.noise**2))
+        self.noise = PySndfile(noiseFilepath, 'r')
+        self.noise_rms = np.load(noiseRMSFilepath)
 
 
     def unsetPageLoaded(self):
@@ -445,13 +448,12 @@ class MatTestThread(Thread):
         self.currentWords = self.listsString[0][currentSentenceInd]
         # Get noise data
         noiseLen = x.size + self.fs
-        start = random.randint(0, self.noise.size-noiseLen)
+        start = random.randint(0, self.noise.frames()-noiseLen)
         end = start + noiseLen
-        x_noise = self.noise[start:end]
-        # Calculate RMS of noise
-        noise_rms = np.sqrt(np.mean(x_noise**2))
+        self.noise.seek(start)
+        x_noise = self.noise.read_frames(end-start)
         # Scale noise to match the RMS of the speech
-        x_noise = x_noise*(x_rms/noise_rms)
+        x_noise = x_noise*(x_rms/self.noise_rms)
         y = x_noise
         # Set speech to start 500ms after the noise, scaled to the desired SNR
         sigStart = round(self.fs/2.)
@@ -470,9 +472,9 @@ class MatTestThread(Thread):
     def saveState(self, out="mat_state.pkl"):
         toSave = ['listsRMS', 'y', 'currentList', 'slope', 'snr', 'snrTrack',
                   'direction', 'noise_rms', 'i', 'currentWords', 'usedLists',
-                  'availableSentenceInds', 'trialN', 'listsString', 'noise',
-                  'fs', 'nCorrect', 'loadedLists', 'lists', 'listN',
-                  'wordsCorrect', 'responses', 'presentedWords', 'srt_50', 's_50']
+                  'availableSentenceInds', 'trialN', 'listsString', 'fs',
+                  'nCorrect', 'loadedLists', 'lists', 'listN', 'wordsCorrect',
+                  'responses', 'presentedWords', 'srt_50', 's_50']
         saveDict = {k:self.__dict__[k] for k in toSave}
         with open(out, 'wb') as f:
             dill.dump(saveDict, f)
@@ -493,7 +495,8 @@ class MatTestThread(Thread):
 
     def loadState(self, filepath):
         with open(filepath, 'rb') as f:
-            self.__dict__.update(dill.load(f))
+            backup_dict = dill.load(f)
+        self.__dict__.update(backup_dict)
 
 
     def run(self):

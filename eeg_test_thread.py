@@ -63,7 +63,7 @@ class EEGTestThread(Thread):
         self.question_files = []
         self.question = []
 
-        self.socketio.on_event('eeg_page_loaded', self.setPageLoaded, namespace='/main')
+        self.socketio.on_event('page_loaded', self.setPageLoaded, namespace='/main')
         self.socketio.on_event('submit_eeg_response', self.submitTestResponse, namespace='/main')
         self.socketio.on_event('finish_eeg_test', self.finishTestEarly, namespace='/main')
         # Percent speech inteligibility (estimated using behavioural measure)
@@ -119,6 +119,15 @@ class EEGTestThread(Thread):
             self.unsetPageLoaded()
             self.socketio.emit('processing-complete', {'data': ''}, namespace='/main')
             self.waitForPageLoad()
+            self.fillTable()
+
+    def fillTable(self):
+        '''
+        '''
+        symb = [[symb_dict[x], symb_dict[y]] for x, y in self.answers]
+        set_trace()
+        self.socketio.emit('eeg_test_fill_table', {'data': symb}, namespace='/main')
+
 
     def setMatrix(self, questions):
         '''
@@ -141,11 +150,8 @@ class EEGTestThread(Thread):
             True: 10003,
             False: 10007
         }
-        try:
-            self.answers[self.trial_ind, self.q_ind] = self.answer in self.response
-            symb = symb_dict[self.answers[self.trial_ind, self.q_ind]]
-        except:
-            set_trace()
+        self.answers[self.trial_ind, self.q_ind] = self.answer in self.response
+        symb = symb_dict[self.answers[self.trial_ind, self.q_ind]]
         self.socketio.emit('eeg_test_resp', {'q_ind': self.q_ind, 'trial_ind': self.trial_ind, "ans": symb}, namespace='/main')
 
     def finishTestEarly(self):
@@ -310,7 +316,7 @@ class EEGTestThread(Thread):
 
     def saveState(self, out="eeg_test_state.pkl"):
         toSave = ['marker_files', 'clinPageLoaded', 'wav_files', 'participant',
-                  'response', 'pageLoaded', 'backupFilepath', 'noise_path',
+                  'response', 'backupFilepath', 'noise_path',
                   'question_files', 'partPageLoaded', 'si', 'question', 'answers']
         saveDict = {k:self.__dict__[k] for k in toSave}
         with open(out, 'wb') as f:

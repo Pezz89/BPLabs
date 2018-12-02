@@ -108,6 +108,10 @@
         socket.on('main-notification', function(msg) {
             alert(msg.data)
         });
+
+        socket.on('check-loaded', function(msg) {
+            socket.emit('page_loaded', {data: "clinician"});
+        });
     });
     </script>
 </body>

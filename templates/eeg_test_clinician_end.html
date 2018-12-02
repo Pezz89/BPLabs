@@ -1,3 +1,73 @@
 {% extends 'index.html' %}
 {% block content %}
+<div class="card">
+    <div id="main-div" class="card-body">
+        <table id="eeg_test_table" class="table table-sm table">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col">Trial #</th>
+                    <th scope="col">1</th>
+                    <th scope="col">2</th>
+                    <th scope="col">3</th>
+                    <th scope="col">4</th>
+                    <th scope="col">5</th>
+                    <th scope="col">6</th>
+                    <th scope="col">7</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="Q1">
+                    <th scope="row">Q1</th>
+                    <td class="T1">-</td>
+                    <td class="T2">-</td>
+                    <td class="T3">-</td>
+                    <td class="T4">-</td>
+                    <td class="T5">-</td>
+                    <td class="T6">-</td>
+                    <td class="T7">-</td>
+                </tr>
+                <tr id="Q2">
+                    <th scope="row">Q2</th>
+                    <td class="T1">-</td>
+                    <td class="T2">-</td>
+                    <td class="T3">-</td>
+                    <td class="T4">-</td>
+                    <td class="T5">-</td>
+                    <td class="T6">-</td>
+                    <td class="T7">-</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="d-flex justify-content-center mt-2" role="group">
+            <button type="button" id="mat-save" class="btn btn-primary mx-3">Save and finish test</button>
+        </div>
+    </div>
+</div>
+<script>
+$(document).ready(function(){
+    // Initialise socketio with a namespace called "main"
+    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+
+    var finalised=0;
+    window.onbeforeunload = confirmExit;
+    function confirmExit() {
+        if (formmodified == 0) {
+            return "New information not saved. Do you wish to leave the page?";
+        }
+    }
+
+    $('#mat-save').click(function(event) {
+        socket.emit("finalise_results")
+        finalised=1;
+        window.location.href = '/home';
+    });
+
+    socket.on('eeg_test_fill_table', function(msg) {
+        var t_ind = msg['trial_ind'];
+        var q_ind = msg['q_ind'];
+        $(`#Q${q_ind+1} > .T${t_ind+1}`).text(String.fromCharCode(msg['ans']));
+    });
+
+});
+</script>
 {% endblock %}

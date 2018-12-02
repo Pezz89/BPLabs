@@ -38,10 +38,6 @@ $(document).ready(function(){
         socket.emit("load_file_dialog_resp", msg)
     });
 
-    socket.on('check-loaded', function(msg) {
-        socket.emit('mat_page_loaded', {data: "clinician"});
-    });
-
     // Catch message when asynchronous process is complete
     socket.on('processing-complete', function(msg) {
         // Re-enable all inputs

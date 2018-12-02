@@ -33,12 +33,12 @@
 
         $('#load-backup').click(function(event) {
             // Send message to call stimulus generation function in Python
-            socket.emit('load_eeg_backup', {part_key: $("#participant").val()});
+            socket.emit('load_eeg_test_backup', {part_key: $("#participant").val()});
             return false;
         })
         $('#load-saved').click(function(event) {
             // Send message to call stimulus generation function in Python
-            socket.emit('load_eeg_session', {part_key: $("#participant").val()});
+            socket.emit('load_eeg_test_session', {part_key: $("#participant").val()});
             return false;
         })
         $('#start_eeg_train').click(function(event) {

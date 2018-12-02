@@ -94,10 +94,6 @@
             return false;
         });
 
-        socket.on('check-loaded', function(msg) {
-            socket.emit('eeg_page_loaded', {data: "participant"});
-        });
-
         socket.on('eeg_stim_done', function(msg) {
             $('.eeg_submit').find('input, textarea, button, select').removeAttr('disabled');
             off()

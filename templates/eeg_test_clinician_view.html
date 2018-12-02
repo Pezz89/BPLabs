@@ -63,10 +63,6 @@
             waitingDialog.hide();
         });
 
-        socket.on('check-loaded', function(msg) {
-            socket.emit('eeg_page_loaded', {data: "clinician"});
-        });
-
         $('#eeg_test_finish').click(function(event) {
             socket.emit("finish_eeg_test")
         });

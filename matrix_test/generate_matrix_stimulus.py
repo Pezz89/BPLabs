@@ -322,7 +322,7 @@ if __name__ == "__main__":
     gen2(args['MatrixDir'], args['OutDir'], y)
     generateAudioStimulus(**args)
 
-    #generateNoiseFromSentences(args['OutDir'], noiseDir)
+    generateNoiseFromSentences(args['OutDir'], noiseDir)
     #generateDecoderAudio(args['OutDir'], noiseDir, decoderDir)
 
 
