@@ -8,7 +8,7 @@
     right: 0;
     bottom: 0;
     background-color: rgba(0,0,0,1); /* Black background with opacity */
-    z-index: 2; /* Specify a stack order in case you're using a different order for other elements */
+    z-index: 14; /* Specify a stack order in case you're using a different order for other elements */
 }
 #overlay > span {
     display: none; /* Hidden by default */
@@ -17,6 +17,40 @@
     left: 50%;
     transform: translateX(-50%) translateY(-50%);
     color: white; /* Black background with opacity */
-    z-index: 3; /* Specify a stack order in case you're using a different order for other elements */
+    z-index: 15; /* Specify a stack order in case you're using a different order for other elements */
     font-size: xx-large;
+}
+
+.mat_grid > button {
+    display: block;
+    text-decoration: none;
+    text-align: center;
+    align-items: stretch;
+    border-radius: 0px;
+    vertical-align: middle;
+}
+
+.mat_submit > button {
+    display: block;
+    text-decoration: none;
+    text-align: center;
+    align-items: stretch;
+    border-radius: 0px;
+    width: 100%;
+    height: 10%;
+}
+
+.mat_grid {
+    display: grid;
+    align-content: center;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(10, 1fr);
+    height: calc(90% - 56px);
+}
+
+.center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    height:100%;
 }

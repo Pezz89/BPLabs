@@ -9,7 +9,6 @@ import re
 import fnmatch
 import pdb
 import numpy as np
-import csv
 from natsort import natsorted
 from collections import namedtuple
 from pysndfile import PySndfile, sndio

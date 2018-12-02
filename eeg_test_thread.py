@@ -5,10 +5,12 @@ from matrix_test.filesystem import globDir
 from pysndfile import PySndfile, sndio
 from random import randint, shuffle
 from shutil import copyfile
+from natsort import natsorted
 
 from matrix_test.signalops import play_wav
 from scipy.special import logit
 from config import socketio
+import csv
 import pdb
 
 def roll_independant(A, r):
@@ -56,6 +58,8 @@ class EEGTestThread(Thread):
 
         self.wav_files = []
         self.marker_files = []
+        self.question_files = []
+        self.question = []
 
         self.socketio.on_event('eeg_page_loaded', self.setPageLoaded, namespace='/main')
         # Percent speech inteligibility (estimated using behavioural measure)
@@ -65,6 +69,7 @@ class EEGTestThread(Thread):
         self.pageLoaded = False
         self.clinPageLoaded = False
         self.partPageLoaded = False
+        self.newResp = False
 
         self._stopevent = Event()
         # Attach messages from gui to class methods
@@ -86,18 +91,21 @@ class EEGTestThread(Thread):
         else:
             self.loadStimulus(listFolder, srt_50, s_50)
 
+        self.dev_mode = True
 
     def testLoop(self):
         '''
         Main loop for iteratively finding the SRT
         '''
         self.waitForPageLoad()
+        self.socketio.emit('eeg_test_ready', namespace='/main')
         # For each stimulus
-        for wav in self.wav_files:
+        for wav, q in zip(self.wav_files, self.question):
             if self._stopevent.isSet():
                 break
             # Play concatenated matrix sentences at set SNR
             self.playStimulus(wav)
+            self.setMatrix(q)
             self.waitForResponse()
             if self._stopevent.isSet():
                 return
@@ -107,6 +115,13 @@ class EEGTestThread(Thread):
             self.unsetPageLoaded()
             self.socketio.emit('processing-complete', {'data': ''}, namespace='/main')
             self.waitForPageLoad()
+
+    def setMatrix(self, questions):
+        '''
+        '''
+        for q in questions:
+            self.socketio.emit('set_matrix', {'data': q}, namespace='/main')
+            set_trace()
 
 
     def finishTestEarly(self):
@@ -121,7 +136,7 @@ class EEGTestThread(Thread):
 
 
     def waitForResponse(self):
-        while not self.newResp and not self._stopevent.isSet() and not self.foundSRT:
+        while not self.newResp and not self._stopevent.isSet():
             self._stopevent.wait(0.2)
         return
 
@@ -171,7 +186,11 @@ class EEGTestThread(Thread):
         #     self.y = self.generateTrial(self.snr)
         # Play audio
         # sd.play(self.y, self.fs, blocking=True)
-        play_wav(wav_file)
+        if not self.dev_mode:
+            play_wav(wav_file)
+        else:
+            play_wav('./test.wav')
+
         self.socketio.emit("eeg_stim_done", namespace="/main")
 
 
@@ -192,11 +211,14 @@ class EEGTestThread(Thread):
         for ind, dir_name in enumerate(stim_dirs):
             stim_dir = os.path.join(listDir, dir_name)
             wav = globDir(stim_dir, "*.wav")[0]
-            marker = globDir(stim_dir, "*.csv")[0]
+            csv_files = natsorted(globDir(stim_dir, "*.csv"))
+            marker_file = csv_files[0]
+            question_file = csv_files[1]
             rms_file = globDir(stim_dir, "*.npy")[0]
             speech_rms = float(np.load(rms_file))
             snr = snrs[:, ind]
             speech, fs, enc, fmt = sndio.read(wav, return_format=True)
+            wf = []
             for ind2, s in enumerate(snr):
                 start = randint(0, noise_file.frames()-speech.size)
                 noise_file.seek(start)
@@ -213,17 +235,24 @@ class EEGTestThread(Thread):
                 out_meta_path = os.path.join(save_dir, "Stim_{0}_{1}.npy".format(ind, ind2))
                 sndio.write(out_wav_path,speech+(noise*snr_fs), fs, fmt, enc)
                 np.save(out_meta_path, snr)
-                self.wav_files.append(out_wav_path)
-                out_csv_path = os.path.join(save_dir, "Marker_{0}.csv".format(ind))
-                self.marker_files.append(out_csv_path)
-            copyfile(marker, out_csv_path)
+                wf.append(out_wav_path)
+            self.wav_files.append(wf)
+            out_marker_path = os.path.join(save_dir, "Marker_{0}.csv".format(ind))
+            self.marker_files.append(out_marker_path)
+            out_q_path = os.path.join(save_dir, "Questions_{0}.csv".format(ind))
+            self.question_files.append(out_q_path)
+            copyfile(marker_file, out_marker_path)
+            copyfile(question_file, out_q_path)
+            q = []
+            with open(out_q_path, 'r') as q_file:
+                q_reader = csv.reader(q_file)
+                for line in q_reader:
+                    q.append(line)
+            self.question.append(q)
 
-        self.socketio.emit('eeg_test_ready', namespace='/main')
         c = list(zip(self.wav_files, self.marker_files))
         shuffle(c)
         self.wav_files, self.marker_files = zip(*c)
-        # Generate wav files for noise/stim mixtures based on psychometric
-        # function
 
 
     def loadNoise(self, noiseFilepath):
@@ -248,31 +277,7 @@ class EEGTestThread(Thread):
         self.pageLoaded = self.clinPageLoaded and self.partPageLoaded
 
 
-    def generateTrial(self, snr):
-        currentSentenceInd = self.availableSentenceInds.pop(0)
-        # Convert desired SNR to dB FS
-        snr_fs = 10**(snr/20)
-        # Get speech data
-        x = self.lists[0][currentSentenceInd]
-        x_rms = self.listsRMS[0][currentSentenceInd]
-        self.currentWords = self.listsString[0][currentSentenceInd]
-        # Get noise data
-        noiseLen = x.size + self.fs
-        start = random.randint(0, self.noise.size-noiseLen)
-        end = start + noiseLen
-        x_noise = self.noise[start:end]
-        # Calculate RMS of noise
-        noise_rms = np.sqrt(np.mean(x_noise**2))
-        # Scale noise to match the RMS of the speech
-        x_noise = x_noise*(x_rms/noise_rms)
-        y = x_noise
-        # Set speech to start 500ms after the noise, scaled to the desired SNR
-        sigStart = round(self.fs/2.)
-        y[sigStart:sigStart+x.size] += x*snr_fs
-        return y
-
-
-    def submitMatResponse(self, msg):
+    def submitTestResponse(self, msg):
         '''
         Get and store participant response for current trial
         '''

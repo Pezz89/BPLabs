@@ -1,11 +1,82 @@
 {% extends 'participant_index.html' %}
 {% block content %}
 <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
-<div id="overlay">
-    <span id="overlay_crosshair">&#10010;</span>
-</div> 
+<div id="main-div" class="outer">
+    <div class="mat_grid">
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-0" class="Btn Btn-outline-secondary mat-button">Peter</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-1" class="Btn Btn-outline-secondary mat-button">got</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-2" class="Btn Btn-outline-secondary mat-button">three</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-3" class="Btn Btn-outline-secondary mat-button">large</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-4" class="Btn Btn-outline-secondary mat-button">desks</button>
+
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-0" class="Btn Btn-outline-secondary mat-button">Kathy</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-1" class="Btn Btn-outline-secondary mat-button">sees</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-2" class="Btn Btn-outline-secondary mat-button">nine</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-3" class="Btn Btn-outline-secondary mat-button">small</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-4" class="Btn Btn-outline-secondary mat-button">chairs</button>
+
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-0" class="Btn Btn-outline-secondary mat-button">Lucy</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-1" class="Btn Btn-outline-secondary mat-button">bought</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-2" class="Btn Btn-outline-secondary mat-button">five</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-3" class="Btn Btn-outline-secondary mat-button">old</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-4" class="Btn Btn-outline-secondary mat-button">shoes</button>
+
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-0" class="Btn Btn-outline-secondary mat-button">Alan</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-1" class="Btn Btn-outline-secondary mat-button">gives</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-2" class="Btn Btn-outline-secondary mat-button">eight</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-3" class="Btn Btn-outline-secondary mat-button">dark</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-4" class="Btn Btn-outline-secondary mat-button">toys</button>
+
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-0" class="Btn Btn-outline-secondary mat-button">Rachel</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-1" class="Btn Btn-outline-secondary mat-button">sold</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-2" class="Btn Btn-outline-secondary mat-button">four</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-3" class="Btn Btn-outline-secondary mat-button">thin</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-4" class="Btn Btn-outline-secondary mat-button">spoons</button>
+
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-0" class="Btn Btn-outline-secondary mat-button">Barry</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-1" class="Btn Btn-outline-secondary mat-button">likes</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-2" class="Btn Btn-outline-secondary mat-button">six</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-3" class="Btn Btn-outline-secondary mat-button">green</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-4" class="Btn Btn-outline-secondary mat-button">mugs</button>
+
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-0" class="Btn Btn-outline-secondary mat-button">Steven</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-1" class="Btn Btn-outline-secondary mat-button">has</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-2" class="Btn Btn-outline-secondary mat-button">two</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-3" class="Btn Btn-outline-secondary mat-button">cheap</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-4" class="Btn Btn-outline-secondary mat-button">ships</button>
+
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-0" class="Btn Btn-outline-secondary mat-button">Thomas</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-1" class="Btn Btn-outline-secondary mat-button">kept</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-2" class="Btn Btn-outline-secondary mat-button">ten</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-3" class="Btn Btn-outline-secondary mat-button">pink</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-4" class="Btn Btn-outline-secondary mat-button">rings</button>
+
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-0" class="Btn Btn-outline-secondary mat-button">Hannah</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-1" class="Btn Btn-outline-secondary mat-button">wins</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-2" class="Btn Btn-outline-secondary mat-button">twelve</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-3" class="Btn Btn-outline-secondary mat-button">red</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-4" class="Btn Btn-outline-secondary mat-button">tins</button>
+
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-0" class="Btn Btn-outline-secondary mat-button">Nina</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-1" class="Btn Btn-outline-secondary mat-button">wants</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-2" class="Btn Btn-outline-secondary mat-button">some</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-3" class="Btn Btn-outline-secondary mat-button">big</button>
+        <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-4" class="Btn Btn-outline-secondary mat-button">beds</button>
+    </div>
+    <div class="mat_submit">
+        <button type="button" href="#" disabled id="mat-submit" class="Btn Btn-primary">Submit</button>
+    </div>
+    <div id="overlay">
+        <span id="overlay_crosshair">&#10010;</span>
+    </div> 
+</div>
+
 <script>
     $(document).ready(function(){
+        jQuery.expr[':'].contains = function(a, i, m) {
+        return jQuery(a).text().toUpperCase()
+            .indexOf(m[3].toUpperCase()) >= 0;
+        };
         // Initialise socketio with a namespace called "main"
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
         waitingDialog.show('Loading... Please wait');
@@ -14,18 +85,70 @@
             on();
         });
 
+        var choice = Array(5).fill('');
+        $('.mat-button').click(function(event) {
+            choice[this.id.slice(-1)] = $(this).text();
+            $('.mat-button#'+this.id).not(this).removeClass("active");
+            $(this).addClass("active");
+            console.log(choice);
+            return false;
+        });
+
         socket.on('check-loaded', function(msg) {
             socket.emit('eeg_page_loaded', {data: "participant"});
         });
 
+        socket.on('eeg_stim_done', function(msg) {
+            off()
+        });
+
+        socket.on('set_matrix', function(msg) {
+            var q = msg['data'][0];
+            q = q.split(" ")
+            var ans = msg['data'][1];
+            for(i = 0; i < q.length; i++) {
+                entry = q[i]
+                var buttons = $(`.mat-button#mat-${i}`)
+                if(entry == "_") {
+                    buttons.removeAttr("disabled");
+                    //buttons.removeClass("active");
+                }
+                else {
+                    buttons.removeClass("active");
+                    buttons.removeAttr("disabled");
+                    buttons.not(`:contains(${entry})`).attr('disabled','disabled');
+                    $(`.mat-button:contains(${entry})`).addClass("active");
+                    $(`.mat-button:contains(${entry})`).attr("aria-pressed", "true");
+                }
+            }
+        });
+
         function on() {
-            document.getElementById("overlay").style.display = "table-cell";
-            document.getElementById("overlay_crosshair").style.display = "inline";
+            $("#overlay").css("display", "table-cell");
+            $("#overlay_crosshair").css("display", "inline");
+            $("#overlay").fadeIn();
+            $("#overlay_crosshair").fadeIn();
         }
 
         function off() {
-            document.getElementById("overlay").style.display = "none";
+            $("#overlay").fadeOut();
         } 
+
+        $('#mat-submit').click(function(event) {
+            $('#mat-submit').prop("disabled", true);
+            if(choice.includes('')) {
+                alert("Please select a word from each column");
+                $('#mat-submit').prop("disabled", false);
+                return false;
+            }
+            else {
+                $('.mat-button').removeClass("active");
+                socket.emit('submit_mat_response', {
+                    resp: choice
+                });
+                choice = Array(5).fill('');
+            }
+        });
     });
 </script>
 {% endblock %}

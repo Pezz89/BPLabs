@@ -86,7 +86,7 @@ def run_server():
     Start the Flask server
     '''
     # SocketIO objects are defined in config.py
-    socketio.run(server, host="127.0.0.1", port=23948)
+    socketio.run(server, host="127.0.0.1", port=23948, debug=True, use_reloader=False)
 
 if __name__ == "__main__":
     run_server()
