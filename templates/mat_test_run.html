@@ -105,8 +105,12 @@
             $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
         });
 
+        // Catch message when asynchronous process is complete
         socket.on('processing-complete', function(msg) {
-            $('#main-div').find('input, textarea, button, select').attr('disabled','disabled');
+            // Re-enable all inputs
+            $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
+            alert("Matrix stimulus processing complete!")
+            window.location.href = '/matrix_test/complete';
         });
 
         socket.on('check-loaded', function(msg) {

@@ -105,14 +105,6 @@
             $('#progress').css("width", msg.data);
         });
 
-        // Catch message when asynchronous process is complete
-        socket.on('processing-complete', function(msg) {
-            // Re-enable all inputs
-            $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
-            alert("Matrix stimulus processing complete!")
-            window.location.href = '/matrix_test/clinician/complete';
-        });
-
         socket.on('main-notification', function(msg) {
             alert(msg.data)
         });

@@ -48,9 +48,23 @@
     height: calc(90% - 56px);
 }
 
+.eeg_submit > button {
+    display: block;
+    text-decoration: none;
+    text-align: center;
+    align-items: stretch;
+    border-radius: 0px;
+    width: 100%;
+    height: 10%;
+}
+
 .center {
     display: block;
     margin-left: auto;
     margin-right: auto;
     height:100%;
+}
+
+#eeg_test_table td {
+    text-align: center;
 }

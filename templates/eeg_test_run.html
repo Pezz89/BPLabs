@@ -63,8 +63,8 @@
         <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-3" class="Btn Btn-outline-secondary mat-button">big</button>
         <button type="button" href="#" data-toggle="button" aria-pressed="false" disabled id="mat-4" class="Btn Btn-outline-secondary mat-button">beds</button>
     </div>
-    <div class="mat_submit">
-        <button type="button" href="#" disabled id="mat-submit" class="Btn Btn-primary">Submit</button>
+    <div class="eeg_submit">
+        <button type="button" href="#" disabled id="eeg-submit" class="Btn Btn-primary">Submit</button>
     </div>
     <div id="overlay">
         <span id="overlay_crosshair">&#10010;</span>
@@ -99,13 +99,13 @@
         });
 
         socket.on('eeg_stim_done', function(msg) {
+            $('.eeg_submit').find('input, textarea, button, select').removeAttr('disabled');
             off()
         });
 
         socket.on('set_matrix', function(msg) {
-            var q = msg['data'][0];
+            var q = msg['data'];
             q = q.split(" ")
-            var ans = msg['data'][1];
             for(i = 0; i < q.length; i++) {
                 entry = q[i]
                 var buttons = $(`.mat-button#mat-${i}`)
@@ -119,8 +119,10 @@
                     buttons.not(`:contains(${entry})`).attr('disabled','disabled');
                     $(`.mat-button:contains(${entry})`).addClass("active");
                     $(`.mat-button:contains(${entry})`).attr("aria-pressed", "true");
+                    choice[i] = entry.toUpperCase();
                 }
             }
+            $('#eeg-submit').prop("disabled", false);
         });
 
         function on() {
@@ -134,20 +136,27 @@
             $("#overlay").fadeOut();
         } 
 
-        $('#mat-submit').click(function(event) {
-            $('#mat-submit').prop("disabled", true);
+        $('#eeg-submit').click(function(event) {
+            $('#eeg-submit').prop("disabled", true);
             if(choice.includes('')) {
                 alert("Please select a word from each column");
-                $('#mat-submit').prop("disabled", false);
+                $('#eeg-submit').prop("disabled", false);
                 return false;
             }
             else {
                 $('.mat-button').removeClass("active");
-                socket.emit('submit_mat_response', {
+                socket.emit('submit_eeg_response', {
                     resp: choice
                 });
                 choice = Array(5).fill('');
             }
+        });
+
+        socket.on('processing-complete', function(msg) {
+            // Re-enable all inputs
+            $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
+            alert("Matrix stimulus processing complete!")
+            window.location.href = '/eeg/test/complete';
         });
     });
 </script>
