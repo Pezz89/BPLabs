@@ -15,6 +15,11 @@ import csv
 import pdb
 import dill
 
+symb_dict = {
+    True: 10003,
+    False: 10007
+}
+
 def roll_independant(A, r):
     rows, column_indices = np.ogrid[:A.shape[0], :A.shape[1]]
 
@@ -81,7 +86,7 @@ class EEGTestThread(Thread):
         self._stopevent = Event()
         # Attach messages from gui to class methods
         if self.participant:
-            folder = self.participant.data_paths['eeg_test_data']
+            folder = self.participant.data_paths['eeg_test']
             self.backupFilepath=os.path.join(folder, 'eeg_test_state.pkl')
         else:
             self.backupFilepath='./eeg_test_state.pkl'
@@ -91,9 +96,9 @@ class EEGTestThread(Thread):
             self.loadState(sessionFilepath)
         elif self.participant:
             # Preload audio at start of the test
-            self.participant.load('adaptive_matrix_data')
-            srt_50 = self.participant.data['adaptive_matrix_data']['srt_50']
-            s_50 = self.participant.data['adaptive_matrix_data']['s_50']
+            self.participant.load('mat')
+            srt_50 = self.participant.data['mat']['srt_50']
+            s_50 = self.participant.data['mat']['s_50']
             self.loadStimulus(listFolder, srt_50, s_50)
         else:
             self.loadStimulus(listFolder, srt_50, s_50)
@@ -125,7 +130,6 @@ class EEGTestThread(Thread):
         '''
         '''
         symb = [[symb_dict[x], symb_dict[y]] for x, y in self.answers]
-        set_trace()
         self.socketio.emit('eeg_test_fill_table', {'data': symb}, namespace='/main')
 
 
@@ -146,10 +150,6 @@ class EEGTestThread(Thread):
         '''
         '''
         self.newResp = False
-        symb_dict = {
-            True: 10003,
-            False: 10007
-        }
         self.answers[self.trial_ind, self.q_ind] = self.answer in self.response
         symb = symb_dict[self.answers[self.trial_ind, self.q_ind]]
         self.socketio.emit('eeg_test_resp', {'q_ind': self.q_ind, 'trial_ind': self.trial_ind, "ans": symb}, namespace='/main')
@@ -189,9 +189,9 @@ class EEGTestThread(Thread):
                   'response', 'pageLoaded', 'backupFilepath', 'noise_path',
                   'question_files', 'partPageLoaded', 'si', 'question', 'answers']
         saveDict = {k:self.__dict__[k] for k in toSave}
-        self.participant['eeg_test_data'].update(saveDict)
-        self.participant.save("eeg_test_data")
-        backup_path = os.path.join(self.participant.data_paths['eeg_test_data'],
+        self.participant['eeg_test'].update(saveDict)
+        self.participant.save("eeg_test")
+        backup_path = os.path.join(self.participant.data_paths['eeg_test'],
                         'finalised_backup.pkl')
         copy2(self.backupFilepath, backup_path)
         self.finalised = True
@@ -257,7 +257,7 @@ class EEGTestThread(Thread):
                 elif snr_fs == -np.inf:
                     raise ValueError("Noise infinitely louder than signal at snr: {}".format(snr))
                 noise = noise*(speech_rms/noise_rms)
-                save_dir = self.participant.data_paths['eeg_test_data/stimulus']
+                save_dir = self.participant.data_paths['eeg_test/stimulus']
                 out_wav_path = os.path.join(save_dir, "Stim_{0}_{1}.wav".format(ind, ind2))
                 out_meta_path = os.path.join(save_dir, "Stim_{0}_{1}.npy".format(ind, ind2))
                 sndio.write(out_wav_path,speech+(noise*snr_fs), fs, fmt, enc)

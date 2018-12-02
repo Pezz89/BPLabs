@@ -123,7 +123,7 @@ class MatTestThread(Thread):
         self._stopevent = Event()
 
         if self.participant:
-            folder = self.participant.data_paths['adaptive_matrix_data']
+            folder = self.participant.data_paths['mat']
             self.backupFilepath=os.path.join(folder, 'mat_state.pkl')
         else:
             self.backupFilepath='./mat_state.pkl'
@@ -195,9 +195,9 @@ class MatTestThread(Thread):
         toSave = ['snrTrack', 'trialN', 'wordsCorrect', 'presentedWords', 'responses', 'srt_50', 's_50']
         saveDict = {k:self.__dict__[k] for k in toSave}
         if self.participant:
-            self.participant['adaptive_matrix_data'].update(saveDict)
-            self.participant.save("adaptive_matrix_data")
-            backup_path = os.path.join(self.participant.data_paths['adaptive_matrix_data'],
+            self.participant['mat'].update(saveDict)
+            self.participant.save("mat")
+            backup_path = os.path.join(self.participant.data_paths['mat'],
                          'finalised_backup.pkl')
             copy2(self.backupFilepath, backup_path)
         else:

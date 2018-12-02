@@ -36,11 +36,11 @@
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
 
         $('#load-backup').click(function(event) {
-            socket.emit('load_mat_backup', {part_key: $("#participant").val()});
+            socket.emit('load_backup_test', {part_key: $("#participant").val(), test_name: "mat"});
             return false;
         })
         $('#load-saved').click(function(event) {
-            socket.emit('load_mat_session', {part_key: $("#participant").val()});
+            socket.emit('load_session', {part_key: $("#participant").val(), test_name: "mat"});
             return false;
         })
         $('#submit').click(function(event) {

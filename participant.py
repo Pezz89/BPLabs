@@ -59,27 +59,27 @@ class Participant:
                 "general_notes": general_notes
             },
 
-            "adaptive_matrix_data": {
+            "mat": {
                 "notes": ''
             },
 
-            "eeg_train_data": {
+            "eeg_train": {
                 "notes": ''
             },
 
-            "eeg_test_data": {
+            "eeg_test": {
                 "notes": ''
             },
 
-            "da_data": {
+            "da": {
                 "notes": ''
             },
 
-            "click_data": {
+            "click": {
                 "notes": ''
             },
 
-            "pta_data": {
+            "pta": {
                 "notes": ''
             }
         }
@@ -87,9 +87,9 @@ class Participant:
     def generate_folder_hierachy(self):
         '''
         '''
-        sub_dirs = ["adaptive_matrix_data", "da_data", "pta_data",
-                    "click_data", "info", "set_matrix_data", "eeg_train_data",
-                    "eeg_test_data", "eeg_test_data/stimulus"]
+        sub_dirs = ["mat", "da", "pta",
+                    "click", "info", "set_matrix", "eeg_train",
+                    "eeg_test", "eeg_test/stimulus"]
         for dir_name in sub_dirs:
             dn = os.path.join(*dir_name.split('/'))
             path = os.path.join(self.participant_dir, dn)

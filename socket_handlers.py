@@ -206,7 +206,7 @@ def start_backup_eeg_test(msg):
     part_key = msg['part_key']
     if part_key != "--":
         participant = participants[part_key]
-        folder = participant.data_paths["eeg_test_data"]
+        folder = participant.data_paths["eeg_test"]
         backupPath = os.path.join(folder, "eeg_test_state.pkl")
     else:
         participant = None
@@ -236,42 +236,26 @@ def start_saved_eeg_test(msg):
     socketio.emit('participant_start_eeg_test', {'data': ''}, namespace='/main', broadcast=True)
     run_eeg_test_thread(sessionFilepath=filepath, participant=participant)
 
-'''
-Behavioral matrix test socket handlers
-'''
-@socketio.on('start_mat_test', namespace='/main')
-def start_mat_test(msg):
+
+@socketio.on('load_backup_test', namespace='/main')
+def load_backup_test(msg):
     '''
     Relay test start message to participant view
     '''
-    socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
-    listN = int(msg['listN'])
-    part_key = msg['part_key']
 
+    test_name = msg.pop('test_name')
+    part_key = msg.pop('part_key')
+    thread_runner = thread_runners[test_name]
+    socketio.emit('participant_start_{}'.format(test_name), namespace='/main')
     if part_key != "--":
         participant = participants[part_key]
+        folder = participant.data_paths[test_name]
+        backupPath = os.path.join(folder, "{}_state.pkl".format(test_name))
     else:
         participant = None
+        backupPath = './{}_state.pkl'.format(test_name)
 
-    run_matrix_thread(listN=listN, participant=participant)
-
-
-@socketio.on('load_mat_backup', namespace='/main')
-def start_backup_mat_test(msg):
-    '''
-    Relay test start message to participant view
-    '''
-    socketio.emit('participant_start_mat', {'data': ''}, namespace='/main', broadcast=True)
-    part_key = msg['part_key']
-    if part_key != "--":
-        participant = participants[part_key]
-        folder = participant.data_paths["adaptive_matrix_data"]
-        backupPath = os.path.join(folder, "mat_state.pkl")
-    else:
-        participant = None
-        backupPath = './mat_state.pkl'
-
-    run_matrix_thread(sessionFilepath=backupPath, participant=participant)
+    thread_runner(sessionFilepath=backupPath, participant=participant, **msg)
 
 
 @socketio.on('load_mat_session', namespace='/main')
