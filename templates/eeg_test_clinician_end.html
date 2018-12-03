@@ -64,9 +64,12 @@ $(document).ready(function(){
     });
 
     socket.on('eeg_test_fill_table', function(msg) {
-        var t_ind = msg['trial_ind'];
-        var q_ind = msg['q_ind'];
-        $(`#Q${q_ind+1} > .T${t_ind+1}`).text(String.fromCharCode(msg['ans']));
+        debugger;
+        for(i = 0; i < msg['data'].length; i++) {
+            for(j = 0; j < msg['data'][i].length; j++) {
+                $(`#Q${j+1} > .T${i+1}`).text(String.fromCharCode(msg['data'][i][j]));
+            }
+        }
     });
 
 });

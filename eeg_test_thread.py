@@ -7,6 +7,7 @@ from random import randint, shuffle
 from shutil import copyfile
 from natsort import natsorted
 import numpy as np
+from shutil import copy2
 
 from matrix_test.signalops import play_wav
 from scipy.special import logit
@@ -71,6 +72,7 @@ class EEGTestThread(Thread):
         self.socketio.on_event('page_loaded', self.setPageLoaded, namespace='/main')
         self.socketio.on_event('submit_eeg_response', self.submitTestResponse, namespace='/main')
         self.socketio.on_event('finish_eeg_test', self.finishTestEarly, namespace='/main')
+        self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
         # Percent speech inteligibility (estimated using behavioural measure)
         # to present stimuli at
         self.si = np.array([20.0, 35.0, 50.0, 65.0, 80.0, 90.0, 100.0])
@@ -79,7 +81,7 @@ class EEGTestThread(Thread):
         self.clinPageLoaded = False
         self.partPageLoaded = False
         self.newResp = False
-        self.finishTest = True
+        self.finishTest = False
 
         self.trial_ind = 0
 
@@ -110,11 +112,12 @@ class EEGTestThread(Thread):
         Main loop for iteratively finding the SRT
         '''
         self.waitForPageLoad()
+        self.loadResponse()
         self.socketio.emit('eeg_test_ready', namespace='/main')
         # For each stimulus
-        for ind, (wav, q) in enumerate(zip(self.wav_files, self.question)):
-            self.trial_ind = ind
-            if self._stopevent.isSet():
+        trials = list(zip(self.wav_files, self.question))[self.trial_ind:]
+        for (wav, q) in trials:
+            if self._stopevent.isSet() or self.finishTest:
                 break
             # Play concatenated matrix sentences at set SNR
             self.playStimulus(wav)
@@ -129,7 +132,7 @@ class EEGTestThread(Thread):
     def fillTable(self):
         '''
         '''
-        symb = [[symb_dict[x], symb_dict[y]] for x, y in self.answers]
+        symb = [[symb_dict[x], symb_dict[y]] for x, y in self.answers if not np.isnan([x, y]).any()]
         self.socketio.emit('eeg_test_fill_table', {'data': symb}, namespace='/main')
 
 
@@ -141,10 +144,11 @@ class EEGTestThread(Thread):
             question = q[0]
             self.socketio.emit('set_matrix', {'data': question}, namespace='/main')
             self.waitForResponse()
-            if self._stopevent.isSet():
+            if self._stopevent.isSet() or self.finishTest:
                 return
             self.processResponse()
-            self.saveState(out=self.backupFilepath)
+        self.trial_ind += 1
+        self.saveState(out=self.backupFilepath)
 
     def processResponse(self):
         '''
@@ -154,10 +158,15 @@ class EEGTestThread(Thread):
         symb = symb_dict[self.answers[self.trial_ind, self.q_ind]]
         self.socketio.emit('eeg_test_resp', {'q_ind': self.q_ind, 'trial_ind': self.trial_ind, "ans": symb}, namespace='/main')
 
+    def loadResponse(self):
+        incomplete_responses = np.isnan(self.answers).any(axis=1)[:, np.newaxis].repeat(2, axis=1)
+        self.answers[incomplete_responses] = np.nan
+        self.fillTable()
+
     def finishTestEarly(self):
         '''
         '''
-        self._stopevent.set()
+        self.finishTest = True
 
 
     def join(self, timeout=None):
@@ -167,7 +176,7 @@ class EEGTestThread(Thread):
 
 
     def waitForResponse(self):
-        while not self.newResp and not self._stopevent.isSet():
+        while not self.newResp and not self._stopevent.isSet() and not self.finishTest:
             self._stopevent.wait(0.2)
         return
 
@@ -179,7 +188,7 @@ class EEGTestThread(Thread):
         return
 
     def waitForFinalise(self):
-        while not self.finalised and not self._stopevent.isSet():
+        while not self.finalised and not self._stopevent.isSet() and not self.finishTest:
             self._stopevent.wait(0.2)
         return
 
@@ -187,7 +196,8 @@ class EEGTestThread(Thread):
     def finaliseResults(self):
         toSave = ['marker_files', 'clinPageLoaded', 'wav_files', 'participant',
                   'response', 'pageLoaded', 'backupFilepath', 'noise_path',
-                  'question_files', 'partPageLoaded', 'si', 'question', 'answers']
+                  'question_files', 'partPageLoaded', 'si', 'question',
+                  'answers', 'trial_ind']
         saveDict = {k:self.__dict__[k] for k in toSave}
         self.participant['eeg_test'].update(saveDict)
         self.participant.save("eeg_test")
@@ -316,8 +326,8 @@ class EEGTestThread(Thread):
 
     def saveState(self, out="eeg_test_state.pkl"):
         toSave = ['marker_files', 'clinPageLoaded', 'wav_files', 'participant',
-                  'response', 'backupFilepath', 'noise_path',
-                  'question_files', 'partPageLoaded', 'si', 'question', 'answers']
+                  'response', 'backupFilepath', 'noise_path', 'question_files',
+                  'partPageLoaded', 'si', 'question', 'answers', 'trial_ind']
         saveDict = {k:self.__dict__[k] for k in toSave}
         with open(out, 'wb') as f:
             dill.dump(saveDict, f)

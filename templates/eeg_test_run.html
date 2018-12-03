@@ -94,6 +94,11 @@
             return false;
         });
 
+        socket.on('eeg_stim_playing', function(msg) {
+            $('.eeg_submit').find('input, textarea, button, select').attr('disabled', 'disabled');
+            on()
+        });
+
         socket.on('eeg_stim_done', function(msg) {
             $('.eeg_submit').find('input, textarea, button, select').removeAttr('disabled');
             off()
