@@ -70,6 +70,7 @@ class EEGTestThread(Thread):
         self.question = []
 
         self.socketio.on_event('page_loaded', self.setPageLoaded, namespace='/main')
+        self.socketio.on_event('part_ready', self.setPartReady, namespace='/main')
         self.socketio.on_event('submit_eeg_response', self.submitTestResponse, namespace='/main')
         self.socketio.on_event('finish_eeg_test', self.finishTestEarly, namespace='/main')
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
@@ -82,6 +83,7 @@ class EEGTestThread(Thread):
         self.partPageLoaded = False
         self.newResp = False
         self.finishTest = False
+        self.partReady = False
 
         self.trial_ind = 0
 
@@ -114,6 +116,7 @@ class EEGTestThread(Thread):
         self.waitForPageLoad()
         self.loadResponse()
         self.socketio.emit('eeg_test_ready', namespace='/main')
+        self.waitForPartReady()
         # For each stimulus
         trials = list(zip(self.wav_files, self.question))[self.trial_ind:]
         for (wav, q) in trials:
@@ -184,6 +187,11 @@ class EEGTestThread(Thread):
     def waitForPageLoad(self):
         while not self.pageLoaded and not self._stopevent.isSet():
             self.socketio.emit("check-loaded", namespace='/main')
+            self._stopevent.wait(0.5)
+        return
+
+    def waitForPartReady(self):
+        while not self.partReady and not self._stopevent.isSet():
             self._stopevent.wait(0.5)
         return
 
@@ -294,19 +302,15 @@ class EEGTestThread(Thread):
         self.answers[:] = np.nan
 
 
-    def loadNoise(self, noiseFilepath):
-        '''
-        Read noise samples and calculate the RMS of the signal
-        '''
-        x, _, _ = sndio.read(noiseFilepath)
-        self.noise = x
-        self.noise_rms = np.sqrt(np.mean(self.noise**2))
-
-
     def unsetPageLoaded(self):
         self.pageLoaded = False
         self.partPageLoaded = False
         self.clinPageLoaded = False
+
+
+    def setPartReady(self):
+        self.partReady = True
+
 
     def setPageLoaded(self, msg):
         if msg['data'] == "clinician":

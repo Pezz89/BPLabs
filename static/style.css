@@ -21,6 +21,19 @@
     font-size: xx-large;
 }
 
+#instructions {
+    position: fixed; /* Sit on top of the page content */
+    display: none; /* Hidden by default */
+    width: 100%; /* Full width (cover the whole page) */
+    height: 100%; /* Full height (cover the whole page) */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: white; /* Black background with opacity */
+    z-index: 14; /* Specify a stack order in case you're using a different order for other elements */
+}
+
 .mat_grid > button {
     display: block;
     text-decoration: none;

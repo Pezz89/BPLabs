@@ -69,6 +69,24 @@
     <div id="overlay">
         <span id="overlay_crosshair">&#10010;</span>
     </div> 
+    <div id="instructions">
+        <div class="card">
+            <div class="card-body">
+                <h2>Instructions</h2>
+                <p>
+                In this test, you will be presented with 20 sentences in backgrond noise.
+                Concentrate on all sentences, and try to remember the missing words for
+                the following sentences:
+                </p>
+                <p id="sentence_1"></p>
+                <p id="sentence_2"></p>
+                <p>When the sentences have all been played, you will be provided with a
+                grid to fill in the blanks. Press the "submit" button when you have
+                made your choice</p>
+                <button type="button" href="#" id="instr_continue" class="Btn Btn-primary">Continue</button>
+            </div>
+        </div> 
+    </div>
 </div>
 
 <script>
@@ -79,10 +97,34 @@
         };
         // Initialise socketio with a namespace called "main"
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
-        waitingDialog.show('Loading... Please wait');
-        socket.on('eeg_test_ready', function(msg) {
+        var loading = true;
+        var part_ready = false;
+
+        function displayInstructions() {
+            $("#instructions").css("display", "table-cell");
+            $("#instructions").fadeIn();
             waitingDialog.hide();
-            on();
+        }
+
+        function hideInstructions() {
+            $("#instructions").css("display", "none");
+            $("#instructions").fadeOut();
+            if(loading) {
+                waitingDialog.show('Loading... Please wait');
+            }
+        }
+
+        displayInstructions();
+        $('#instr_continue').click(function(event) {
+            hideInstructions();
+            part_ready = true;
+            socket.emit("part_ready")
+            on()
+        });
+
+        socket.on('eeg_test_ready', function(msg) {
+            loading = false;
+            waitingDialog.hide();
         });
 
         var choice = Array(5).fill('');

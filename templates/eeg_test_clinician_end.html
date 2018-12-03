@@ -49,22 +49,12 @@ $(document).ready(function(){
     // Initialise socketio with a namespace called "main"
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
 
-    var finalised=0;
-    window.onbeforeunload = confirmExit;
-    function confirmExit() {
-        if (formmodified == 0) {
-            return "New information not saved. Do you wish to leave the page?";
-        }
-    }
-
     $('#mat-save').click(function(event) {
         socket.emit("finalise_results")
-        finalised=1;
         window.location.href = '/home';
     });
 
     socket.on('eeg_test_fill_table', function(msg) {
-        debugger;
         for(i = 0; i < msg['data'].length; i++) {
             for(j = 0; j < msg['data'][i].length; j++) {
                 $(`#Q${j+1} > .T${i+1}`).text(String.fromCharCode(msg['data'][i][j]));
