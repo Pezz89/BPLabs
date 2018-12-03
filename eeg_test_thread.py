@@ -115,11 +115,16 @@ class EEGTestThread(Thread):
         '''
         self.waitForPageLoad()
         self.loadResponse()
-        self.socketio.emit('eeg_test_ready', namespace='/main')
-        self.waitForPartReady()
+        self.socketio.emit(
+            'eeg_test_ready',
+            {'sentence_1': self.question[0][0][0], 'sentence_2':
+             self.question[0][1][0]}, namespace='/main'
+        )
         # For each stimulus
         trials = list(zip(self.wav_files, self.question))[self.trial_ind:]
         for (wav, q) in trials:
+            self.displayInstructions()
+            self.waitForPartReady()
             if self._stopevent.isSet() or self.finishTest:
                 break
             # Play concatenated matrix sentences at set SNR
@@ -131,6 +136,13 @@ class EEGTestThread(Thread):
             self.socketio.emit('processing-complete', {'data': ''}, namespace='/main')
             self.waitForPageLoad()
             self.fillTable()
+
+    def displayInstructions(self):
+        self.socketio.emit(
+            'display_instructions',
+            {'sentence_1': self.question[self.trial_ind][0][0], 'sentence_2':
+            self.question[self.trial_ind][1][0]}, namespace='/main'
+        )
 
     def fillTable(self):
         '''
@@ -193,6 +205,7 @@ class EEGTestThread(Thread):
     def waitForPartReady(self):
         while not self.partReady and not self._stopevent.isSet():
             self._stopevent.wait(0.5)
+        self.partReady = False
         return
 
     def waitForFinalise(self):
@@ -295,9 +308,9 @@ class EEGTestThread(Thread):
                     q.append(line)
             self.question.append(q)
 
-        c = list(zip(self.wav_files, self.marker_files))
+        c = list(zip(self.wav_files, self.marker_files, self.question))
         shuffle(c)
-        self.wav_files, self.marker_files = zip(*c)
+        self.wav_files, self.marker_files, self.question = zip(*c)
         self.answers = np.empty(np.shape(self.question)[:2])
         self.answers[:] = np.nan
 

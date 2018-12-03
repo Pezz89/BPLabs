@@ -74,15 +74,19 @@
             <div class="card-body">
                 <h2>Instructions</h2>
                 <p>
-                In this test, you will be presented with 20 sentences in backgrond noise.
-                Concentrate on all sentences, and try to remember the missing words for
-                the following sentences:
+                In this test, you will be presented with 20 sentences in
+                backgrond noise.  Concentrate on all sentences, and try to
+                remember the missing words (indicated with "_") for the
+                following sentences:
                 </p>
-                <p id="sentence_1"></p>
-                <p id="sentence_2"></p>
-                <p>When the sentences have all been played, you will be provided with a
-                grid to fill in the blanks. Press the "submit" button when you have
-                made your choice</p>
+                <br>
+                <h3 id="sentence_1" align='center'>Loading...</h3>
+                <br>
+                <h3 id="sentence_2" align='center'>Loading...</h3>
+                <br>
+                <p>When the sentences have all been played, you will be
+                provided with a grid to fill in the blanks. Press the "submit"
+                button when you have made your choice</p>
                 <button type="button" href="#" id="instr_continue" class="Btn Btn-primary">Continue</button>
             </div>
         </div> 
@@ -99,6 +103,7 @@
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
         var loading = true;
         var part_ready = false;
+        waitingDialog.show('Loading... Please wait');
 
         function displayInstructions() {
             $("#instructions").css("display", "table-cell");
@@ -114,7 +119,7 @@
             }
         }
 
-        displayInstructions();
+
         $('#instr_continue').click(function(event) {
             hideInstructions();
             part_ready = true;
@@ -122,9 +127,18 @@
             on()
         });
 
+        socket.on('display_instructions', function(msg) {
+            $("#sentence_1").text(msg['sentence_1'])
+            $("#sentence_2").text(msg['sentence_2'])
+            displayInstructions();
+        });
+
         socket.on('eeg_test_ready', function(msg) {
+            $("#sentence_1").text(msg['sentence_1'])
+            $("#sentence_2").text(msg['sentence_2'])
             loading = false;
             waitingDialog.hide();
+            displayInstructions();
         });
 
         var choice = Array(5).fill('');
