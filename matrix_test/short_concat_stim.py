@@ -59,7 +59,7 @@ def main():
             a = 0
             for ind, (wav, txt) in enumerate(zip(merged_wavs, words)):
                 csv_line = [counter]
-                silence = np.zeros(np.random.uniform(int(0.3*44100), int(0.5*44100), 1).astype(int))
+                silence = np.zeros(np.random.uniform(int(0.3*44100), int(0.4*44100), 1).astype(int))
                 out_wav.write_frames(silence)
                 counter += silence.size
                 csv_line.append(counter)

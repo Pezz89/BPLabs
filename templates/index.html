@@ -112,6 +112,15 @@
         socket.on('check-loaded', function(msg) {
             socket.emit('page_loaded', {data: "clinician"});
         });
+
+        // FIXME: A terrible hack because I can't get the main thread to talk to
+        // the subthread directly using socketio...
+        socket.on('save_file_dialog_resp', function(msg) {
+            socket.emit("save_file_dialog_resp", msg)
+        });
+        socket.on('load_file_dialog_resp', function(msg) {
+            socket.emit("load_file_dialog_resp", msg)
+        });
     });
     </script>
 </body>

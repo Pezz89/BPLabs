@@ -134,11 +134,8 @@
         });
 
         socket.on('eeg_test_ready', function(msg) {
-            $("#sentence_1").text(msg['sentence_1'])
-            $("#sentence_2").text(msg['sentence_2'])
             loading = false;
             waitingDialog.hide();
-            displayInstructions();
         });
 
         var choice = Array(5).fill('');

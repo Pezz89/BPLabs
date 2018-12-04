@@ -29,14 +29,6 @@ $(document).ready(function(){
     socket.on('mat_plot_ready', function(msg) {
         $('#mat_plot').attr('src', msg.data);
     });
-    // FIXME: A terrible hack because I can't get the main thread to talk to
-    // the subthread directly using socketio...
-    socket.on('save_file_dialog_resp', function(msg) {
-        socket.emit("save_file_dialog_resp", msg)
-    });
-    socket.on('load_file_dialog_resp', function(msg) {
-        socket.emit("load_file_dialog_resp", msg)
-    });
 
     // Catch message when asynchronous process is complete
     socket.on('processing-complete', function(msg) {

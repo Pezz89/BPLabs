@@ -68,12 +68,15 @@ class EEGTestThread(Thread):
         self.marker_files = []
         self.question_files = []
         self.question = []
+        self.response = []
 
         self.socketio.on_event('page_loaded', self.setPageLoaded, namespace='/main')
         self.socketio.on_event('part_ready', self.setPartReady, namespace='/main')
         self.socketio.on_event('submit_eeg_response', self.submitTestResponse, namespace='/main')
         self.socketio.on_event('finish_eeg_test', self.finishTestEarly, namespace='/main')
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
+        self.socketio.on_event('save_file_dialog_resp', self.manualSave, namespace='/main')
+        self.socketio.on_event('load_file_dialog_resp', self.loadStateSocketHandle, namespace='/main')
         # Percent speech inteligibility (estimated using behavioural measure)
         # to present stimuli at
         self.si = np.array([20.0, 35.0, 50.0, 65.0, 80.0, 90.0, 100.0])
@@ -200,6 +203,7 @@ class EEGTestThread(Thread):
         while not self.pageLoaded and not self._stopevent.isSet():
             self.socketio.emit("check-loaded", namespace='/main')
             self._stopevent.wait(0.5)
+        self.pageLoaded = False
         return
 
     def waitForPartReady(self):
@@ -265,6 +269,9 @@ class EEGTestThread(Thread):
         noise_file = PySndfile(self.noise_path, 'r')
         stim_dirs = os.listdir(listDir)
         shuffle(stim_dirs)
+        wav_files = []
+        question = []
+        marker_files = []
         self.socketio.emit('eeg_test_stim_load', namespace='/main')
         for ind, dir_name in enumerate(stim_dirs):
             stim_dir = os.path.join(listDir, dir_name)
@@ -294,9 +301,9 @@ class EEGTestThread(Thread):
                 sndio.write(out_wav_path,speech+(noise*snr_fs), fs, fmt, enc)
                 np.save(out_meta_path, snr)
                 wf.append(out_wav_path)
-            self.wav_files.append(wf)
+            wav_files.append(wf)
             out_marker_path = os.path.join(save_dir, "Marker_{0}.csv".format(ind))
-            self.marker_files.append(out_marker_path)
+            marker_files.append(out_marker_path)
             out_q_path = os.path.join(save_dir, "Questions_{0}.csv".format(ind))
             self.question_files.append(out_q_path)
             copyfile(marker_file, out_marker_path)
@@ -306,11 +313,21 @@ class EEGTestThread(Thread):
                 q_reader = csv.reader(q_file)
                 for line in q_reader:
                     q.append(line)
-            self.question.append(q)
+            question.append(q)
+
+        self.wav_files = [item for sublist in wav_files for item in sublist]
+
+        for item in question:
+            self.question.extend([item] * 4)
+
+        for item in marker_files:
+            self.marker_files.extend([item] * 4)
+
 
         c = list(zip(self.wav_files, self.marker_files, self.question))
         shuffle(c)
         self.wav_files, self.marker_files, self.question = zip(*c)
+
         self.answers = np.empty(np.shape(self.question)[:2])
         self.answers[:] = np.nan
 
