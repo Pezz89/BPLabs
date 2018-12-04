@@ -13,12 +13,34 @@ import numpy as np
 import csv
 from copy import copy
 
+def calc_potential_max(stim_folder, noise_filepath, out_dir):
+    max_wav_samp = 0
+    max_wav_rms = 0
+    wavs = globDir(stim_folder, '*.wav')
+    for wav in wavs:
+        x, fs, enc = sndio.read(wav)
+        max_wav_samp = np.max([max_wav_samp, np.max(x)])
+        max_wav_rms = np.max([max_wav_rms, np.sqrt(np.mean(x**2))])
+    x, fs, enc = sndio.read(noise_filepath)
+    noise_rms = np.sqrt(np.mean(x**2))
+    max_noise_samp = max(x)
+
+    snr = -20.0
+    snr_fs = 10**(snr/20)
+    max_noise_samp *= max_wav_rms/noise_rms
+    max_sampl = max_wav_samp+(max_noise_samp/snr_fs)
+    reduction_coef = 0.93/max_sampl
+    np.save(os.path.join(out_dir, "reduction_coef.npy"), reduction_coef)
+
+
 def main():
     base_dir = "./stimulus/wav/sentence-lists/"
     out_dir = "./short_concat_stim/"
+    noise_filepath = "./stimulus/wav/noise/noise.wav"
     folders = os.listdir(base_dir)
     folders = natsorted(folders)[1:15]
     folders = list(zip(folders[::2], folders[1::2]))
+    calc_potential_max(base_dir, noise_filepath, out_dir)
 
     for ind, (list_folder_1, list_folder_2) in enumerate(folders):
         out_folder_name = 'Stim_{}'.format(ind)
@@ -67,7 +89,7 @@ def main():
                 writer.writerow(csv_line)
                 csv_line = [counter]
                 x, fs, enc = sndio.read(wav)
-                sum_sqrd = np.sum(x**2)
+                sum_sqrd += np.sum(x**2)
                 n += x.size
                 out_wav.write_frames(x)
                 counter += x.size
@@ -92,6 +114,9 @@ def main():
             writer.writerow(csv_line)
             rms = np.sqrt(sum_sqrd/n)
             np.save(out_rms_path, rms)
+
+            x, fs, enc = sndio.read(out_wav_path)
+            pdb.set_trace()
 
 if __name__ == "__main__":
     main()

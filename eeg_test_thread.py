@@ -7,6 +7,7 @@ from random import randint, shuffle
 from shutil import copyfile
 from natsort import natsorted
 import numpy as np
+import pandas as pd
 from shutil import copy2
 
 from matrix_test.signalops import play_wav
@@ -261,13 +262,18 @@ class EEGTestThread(Thread):
         '''
         # Estimate speech intelligibility thresholds using predicted
         # psychometric function
+        reduction_coef = float(np.load(os.path.join(listDir, 'reduction_coef.npy')))
         s_50 *= 0.01
         x = logit(self.si * 0.01)
         snrs = (x/(4*s_50))+srt_50
+        snr_map = pd.DataFrame({"speech_intel" : self.si, "snr": snrs})
+        save_dir = self.participant.data_paths['eeg_test/stimulus']
+        snr_map_path = os.path.join(save_dir, "snr_map.csv")
+        snr_map.to_csv(snr_map_path)
         snrs = np.repeat(snrs[np.newaxis], 4, axis=0)
         snrs = roll_independant(snrs, np.array([0,-1,-2,-3]))
         noise_file = PySndfile(self.noise_path, 'r')
-        stim_dirs = os.listdir(listDir)
+        stim_dirs = [x for x in os.listdir(listDir) if os.path.isdir(os.path.join(listDir, x))]
         shuffle(stim_dirs)
         wav_files = []
         question = []
@@ -289,16 +295,20 @@ class EEGTestThread(Thread):
                 noise_file.seek(start)
                 noise = noise_file.read_frames(speech.size)
                 noise_rms = np.sqrt(np.mean(noise**2))
-                snr_fs = 10**(s/20)
+                snr_fs = 10**(-s/20)
                 if snr_fs == np.inf:
                     snr_fs = 0.
                 elif snr_fs == -np.inf:
                     raise ValueError("Noise infinitely louder than signal at snr: {}".format(snr))
                 noise = noise*(speech_rms/noise_rms)
-                save_dir = self.participant.data_paths['eeg_test/stimulus']
                 out_wav_path = os.path.join(save_dir, "Stim_{0}_{1}.wav".format(ind, ind2))
                 out_meta_path = os.path.join(save_dir, "Stim_{0}_{1}.npy".format(ind, ind2))
-                sndio.write(out_wav_path,speech+(noise*snr_fs), fs, fmt, enc)
+                with np.errstate(divide='raise'):
+                    try:
+                        out_wav = (speech+(noise*snr_fs))*reduction_coef
+                    except:
+                        set_trace()
+                sndio.write(out_wav_path, out_wav, fs, fmt, enc)
                 np.save(out_meta_path, snr)
                 wf.append(out_wav_path)
             wav_files.append(wf)
