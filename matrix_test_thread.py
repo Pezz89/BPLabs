@@ -63,6 +63,7 @@ class MatTestThread(Thread):
                  noiseFilepath="./matrix_test/stimulus/wav/noise/noise.wav",
                  noiseRMSFilepath="./matrix_test/stimulus/rms/noise/noise_rms.npy",
                  listFolder="./matrix_test/stimulus/wav/sentence-lists/",
+                 red_coef="./matrix_test/short_concat_stim/reduction_coef.npy",
                  socketio=None, participant=None):
         super(MatTestThread, self).__init__()
         self.participant=participant
@@ -82,6 +83,7 @@ class MatTestThread(Thread):
         self.socketio.on_event('finish_test', self.finishTestEarly, namespace='/main')
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
 
+        self.reduction_coef = np.load(red_coef)
         self.listN = int(listN)
         self.loadedLists = []
         self.lists = []
@@ -458,6 +460,7 @@ class MatTestThread(Thread):
         # Set speech to start 500ms after the noise, scaled to the desired SNR
         sigStart = round(self.fs/2.)
         y[sigStart:sigStart+x.size] += x*snr_fs
+        y *= self.reduction_coef
         return y
 
 
