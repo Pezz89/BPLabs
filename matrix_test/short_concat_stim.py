@@ -13,6 +13,7 @@ import numpy as np
 import csv
 from copy import copy
 from contextlib import ExitStack
+from scipy.signal import square
 
 def calc_potential_max(stim_folder, noise_filepath, out_dir):
     max_wav_samp = 0
@@ -34,6 +35,13 @@ def calc_potential_max(stim_folder, noise_filepath, out_dir):
     np.save(os.path.join(out_dir, "reduction_coef.npy"), reduction_coef)
 
 
+def gen_trigger(idx, freq, length, fs):
+
+    duty = length*freq
+    trigger = square(2*np.pi*(idx/fs)*freq, duty=duty)
+    trigger[trigger < 0] = 0
+    return trigger
+
 def main():
     base_dir = "./stimulus/wav/sentence-lists/"
     out_dir = "./short_concat_stim/"
@@ -43,6 +51,7 @@ def main():
     folders = list(zip(folders[::2], folders[1::2]))
     calc_potential_max(base_dir, noise_filepath, out_dir)
     n_questions = 4
+    fs = 44100
 
     for ind, (list_folder_1, list_folder_2) in enumerate(folders):
         out_folder_name = 'Stim_{}'.format(ind)
@@ -53,7 +62,7 @@ def main():
         out_csv_path = os.path.join(out_folder, "markers.csv")
         out_rms_path = os.path.join(out_folder, "rms.npy")
         out_q_path = [os.path.join(out_folder, "questions_{}.csv".format(x)) for x in range(n_questions)]
-        out_wav = PySndfile(out_wav_path, 'w', construct_format('wav', 'pcm16'), 1, 44100)
+        out_wav = PySndfile(out_wav_path, 'w', construct_format('wav', 'pcm16'), 3, 44100)
         list_1_wav = globDir(os.path.join(base_dir, list_folder_1), '*.wav')
         list_2_wav = globDir(os.path.join(base_dir, list_folder_2), '*.wav')
         list_1_csv = globDir(os.path.join(base_dir, list_folder_1), '*.csv')
@@ -89,9 +98,12 @@ def main():
             a = 0
             for ind, (wav, txt) in enumerate(zip(merged_wavs, words)):
                 csv_line = [counter]
-                silence = np.zeros(np.random.uniform(int(0.3*44100), int(0.4*44100), 1).astype(int))
+                silence = np.zeros((int(np.random.uniform(int(0.3*44100), int(0.4*44100), 1)), 3))
+                idx = np.arange(counter, counter+silence.shape[0])
+                trigger = gen_trigger(idx, 2., 0.01, fs)
+                silence[:, 2] = trigger
                 out_wav.write_frames(silence)
-                counter += silence.size
+                counter += silence.shape[0]
                 csv_line.append(counter)
                 csv_line.append("#")
                 writer.writerow(csv_line)
@@ -99,8 +111,13 @@ def main():
                 x, fs, enc = sndio.read(wav)
                 sum_sqrd += np.sum(x**2)
                 n += x.size
-                out_wav.write_frames(x)
-                counter += x.size
+
+                y = np.vstack([x, x, np.zeros(x.size)]).T
+                idx = np.arange(counter, counter+y.shape[0])
+                trigger = gen_trigger(idx, 2., 0.01, fs)
+                y[:, 2] = trigger
+                out_wav.write_frames(y)
+                counter += y.shape[0]
                 csv_line.append(counter)
                 csv_line.append(" ".join(txt))
                 writer.writerow(csv_line)
@@ -115,7 +132,10 @@ def main():
                 pdb.set_trace()
 
             csv_line = [counter]
-            silence = np.zeros(np.random.uniform(int(0.3*44100), int(0.4*44100), 1).astype(int))
+            silence = np.zeros((int(np.random.uniform(int(0.3*44100), int(0.4*44100), 1)), 3))
+            idx = np.arange(counter, counter+silence.shape[0])
+            trigger = gen_trigger(idx, 2., 0.01, fs)
+            silence[:, 2] = trigger
             out_wav.write_frames(silence)
             counter += silence.size
             csv_line.append(counter)

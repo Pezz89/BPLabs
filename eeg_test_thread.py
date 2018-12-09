@@ -111,7 +111,7 @@ class EEGTestThread(Thread):
         else:
             self.loadStimulus(listFolder, srt_50, s_50)
 
-        self.dev_mode = True
+        self.dev_mode = False
 
     def testLoop(self):
         '''
@@ -288,12 +288,15 @@ class EEGTestThread(Thread):
             rms_file = globDir(stim_dir, "*.npy")[0]
             speech_rms = float(np.load(rms_file))
             snr = snrs[:, ind]
-            speech, fs, enc, fmt = sndio.read(wav, return_format=True)
+            audio, fs, enc, fmt = sndio.read(wav, return_format=True)
+
+            speech = audio[:, :2]
+            triggers = audio[:, 2]
             wf = []
             for ind2, s in enumerate(snr):
-                start = randint(0, noise_file.frames()-speech.size)
+                start = randint(0, noise_file.frames()-speech.shape[0])
                 noise_file.seek(start)
-                noise = noise_file.read_frames(speech.size)
+                noise = noise_file.read_frames(speech.shape[0])
                 noise_rms = np.sqrt(np.mean(noise**2))
                 snr_fs = 10**(-s/20)
                 if snr_fs == np.inf:
@@ -305,9 +308,10 @@ class EEGTestThread(Thread):
                 out_meta_path = os.path.join(save_dir, "Stim_{0}_{1}.npy".format(ind, ind2))
                 with np.errstate(divide='raise'):
                     try:
-                        out_wav = (speech+(noise*snr_fs))*reduction_coef
+                        out_wav = (speech+(np.stack([noise, noise], axis=1)*snr_fs))*reduction_coef
                     except:
                         set_trace()
+                out_wav = np.concatenate([out_wav, triggers[:, np.newaxis]], axis=1)
                 sndio.write(out_wav_path, out_wav, fs, fmt, enc)
                 np.save(out_meta_path, snr)
                 wf.append(out_wav_path)
