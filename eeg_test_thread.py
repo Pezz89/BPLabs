@@ -284,7 +284,7 @@ class EEGTestThread(Thread):
             wav = globDir(stim_dir, "*.wav")[0]
             csv_files = natsorted(globDir(stim_dir, "*.csv"))
             marker_file = csv_files[0]
-            question_file = csv_files[1]
+            question_files = csv_files[1:]
             rms_file = globDir(stim_dir, "*.npy")[0]
             speech_rms = float(np.load(rms_file))
             snr = snrs[:, ind]
@@ -314,25 +314,26 @@ class EEGTestThread(Thread):
             wav_files.append(wf)
             out_marker_path = os.path.join(save_dir, "Marker_{0}.csv".format(ind))
             marker_files.append(out_marker_path)
-            out_q_path = os.path.join(save_dir, "Questions_{0}.csv".format(ind))
-            self.question_files.append(out_q_path)
             copyfile(marker_file, out_marker_path)
-            copyfile(question_file, out_q_path)
-            q = []
-            with open(out_q_path, 'r') as q_file:
-                q_reader = csv.reader(q_file)
-                for line in q_reader:
-                    q.append(line)
-            question.append(q)
+            for q_file in question_files:
+                out_q_path = os.path.join(save_dir, "Questions_{0}_{1}.csv".format(ind, ind2))
+                self.question_files.append(out_q_path)
+                copyfile(q_file, out_q_path)
+
+            for q_file_path in question_files:
+                q = []
+                with open(q_file_path, 'r') as q_file:
+                    q_reader = csv.reader(q_file)
+                    for line in q_reader:
+                        q.append(line)
+                question.append(q)
 
         self.wav_files = [item for sublist in wav_files for item in sublist]
 
-        for item in question:
-            self.question.extend([item] * 4)
+        self.question.extend(question)
 
         for item in marker_files:
             self.marker_files.extend([item] * 4)
-
 
         c = list(zip(self.wav_files, self.marker_files, self.question))
         shuffle(c)
