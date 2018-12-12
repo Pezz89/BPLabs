@@ -9,9 +9,12 @@ import sounddevice as sd
 import soundfile as sf
 
 
-def play_wav(wav_file, buffersize=20, blocksize=1024):
+
+def play_wav(wav_file, buffersize=20, blocksize=1024, socketio=None):
     q = queue.Queue(maxsize=buffersize)
     event = threading.Event()
+
+
     def callback(outdata, frames, time, status):
         assert frames == blocksize
         if status.output_underflow:
@@ -47,6 +50,7 @@ def play_wav(wav_file, buffersize=20, blocksize=1024):
                 data = f.buffer_read(blocksize, dtype='float32')
                 q.put(data, timeout=timeout)
             event.wait()  # Wait until playback is finished
+        return stream
 
 def rolling_window_lastaxis(a, window):
     """Directly taken from Erik Rigtorp's post to numpy-discussion.

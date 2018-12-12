@@ -8,6 +8,7 @@ import io
 import re
 import base64
 import shutil
+import pdb
 
 import webview
 import webbrowser
@@ -17,13 +18,16 @@ from threading import Thread, Event
 import numpy as np
 import random
 from pysndfile import sndio
+import sounddevice as sd
 from scipy.optimize import minimize
+from WavPlayer import play_wav_async
 
 from app import generate_matrix_stimulus
 from matrix_test.filesystem import globDir, organiseWavs, prepareOutDir
 from matrix_test_thread import MatTestThread
 from pathops import dir_must_exist
 from participant import Participant
+from matrix_test.signalops import play_wav
 
 from config import server, socketio, participants
 from matrix_test_thread import run_matrix_thread
@@ -319,4 +323,16 @@ def checkMatProcessingStatus():
     else:
         socketio.emit('mat-processing-status', {'data': False}, namespace='/main')
 
+
+'''
+Calibration socket handlers
+'''
+WavPlayer = None
+@socketio.on('play_calibrate', namespace='/main')
+def playCalibrate():
+    WavPlayer = play_wav_async('./matrix_test/stimulus/wav/noise/noise.wav', 'stop_calibrate')
+
+@socketio.on('stop_calibrate', namespace='/main')
+def stop_playback():
+    WavPlayer.join()
 

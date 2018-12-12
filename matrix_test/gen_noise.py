@@ -187,7 +187,7 @@ def calc_spectrum(files, silences, fs=44100, plot=False):
     return b
 
 
-def gen_noise(OutDir, b, fs):
+def gen_noise(OutDir, b, fs, s_rms):
     print("Generating noise...")
     # Generate 10 minutes of white noise
     x = np.random.randn(int(fs*60.*10.))
@@ -200,8 +200,31 @@ def gen_noise(OutDir, b, fs):
     y = block_lfilter_wav(b, [1.0], x, os.path.join(noiseDir, 'noise.wav'), 65538, 44100)
     noise_rms_path = os.path.join(noiseDir, 'noise_rms.npy')
     rms = np.mean(np.sqrt(y**2))
-    np.save(noise_rms_path, rms)
+    y = y*(s_rms/rms)
+    np.save(noise_rms_path, s_rms)
     return y
+
+
+def calc_speech_rms(files, silences, rmsDir, fs=44100, plot=False):
+    '''
+    '''
+    f = sum(files, [])
+    sumsqrd = 0.0
+    n = 0
+    for wavfile, sil in zip(f, silences):
+        y, fs, _ = sndio.read(wavfile)
+        t = np.arange(y.size)
+        sTemp = np.zeros((sil.shape[0], t.size), dtype=bool)
+        for ind3, s in enumerate(sil):
+            sTemp[ind3, :] = np.logical_and(t > s[0], t < s[1])
+        silentSamples = np.any(sTemp, axis=0)
+        y_temp = y[~silentSamples]
+        sumsqrd += np.sum(y_temp**2)
+        n += y_temp.size
+    rms = np.sqrt(sumsqrd/n)
+    np.save(os.path.join(rmsDir, 'overall_speech_rms.npy'), rms)
+    return rms
+        #sentenceFFT.append(np.abs(Zxx[:, ~np.any(sTemp, axis=0)]))
 
 
 if __name__ == "__main__":
@@ -234,7 +257,8 @@ if __name__ == "__main__":
                 wf[listInd].append(wavFiles[listInd*10+sentenceInd])
         wavFiles = wf
 
-        rmsFiles = globDir(rmsDir, '*.npy')
+        rmsFiles = globDir(rmsDir, 'Trial*.npy')
     silences = detect_silences(rmsFiles, 44100)
+    s_rms = calc_speech_rms(wavFiles, silences, rmsDir)
     b = calc_spectrum(wavFiles, silences)
-    y = gen_noise(args['OutDir'], b, 44100)
+    y = gen_noise(args['OutDir'], b, 44100, s_rms)

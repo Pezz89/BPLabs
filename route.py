@@ -200,3 +200,9 @@ def daStim():
     return render_template("da_stim.html")
 
 
+'''
+Calibration routing
+'''
+@server.route('/calibrate')
+def calibrate():
+    return render_template("calibrate.html")
