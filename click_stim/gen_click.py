@@ -20,6 +20,7 @@ def main():
     y_part_inv = -y_part
 
     y_2part = np.concatenate([y_part, y_part_inv])
+    pdb.set_trace()
     y = np.tile(y_2part, 1500)
     sndio.write('./3000_da.wav', y, rate = fs, format = fmt, enc=enc)
 
