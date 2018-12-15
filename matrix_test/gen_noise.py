@@ -199,9 +199,8 @@ def gen_noise(OutDir, b, fs, s_rms):
     dir_must_exist(noiseDir)
     y = block_lfilter_wav(b, [1.0], x, os.path.join(noiseDir, 'noise.wav'), 65538, 44100)
     noise_rms_path = os.path.join(noiseDir, 'noise_rms.npy')
-    rms = np.mean(np.sqrt(y**2))
-    y = y*(s_rms/rms)
-    np.save(noise_rms_path, s_rms)
+    rms = np.sqrt(np.mean(y**2))
+    np.save(noise_rms_path, rms)
     return y
 
 

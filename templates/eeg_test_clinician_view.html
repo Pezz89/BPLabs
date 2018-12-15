@@ -115,7 +115,7 @@
         // Check if matrix stimulus is currently being processed
         waitingDialog.show('Generating stimulus');
 
-        socket.on('eeg_test_fill_table', function(msg) {
+        socket.on('test_fill_table', function(msg) {
             for(i = 0; i < msg['data'].length; i++) {
                 for(j = 0; j < msg['data'][i].length; j++) {
                     $(`#Q${j+1} > .T${i+1}`).text(String.fromCharCode(msg['data'][i][j]));
@@ -123,13 +123,13 @@
             }
         });
 
-        socket.on('eeg_test_resp', function(msg) {
+        socket.on('test_resp', function(msg) {
             var t_ind = msg['trial_ind'];
             var q_ind = msg['q_ind'];
             $(`#Q${q_ind+1} > .T${t_ind+1}`).text(String.fromCharCode(msg['ans']));
         });
 
-        socket.on('eeg_test_ready', function(msg) {
+        socket.on('test_ready', function(msg) {
             waitingDialog.hide();
         });
 
@@ -138,7 +138,7 @@
         });
 
         $('#eeg_test_finish').click(function(event) {
-            socket.emit("finish_eeg_test")
+            socket.emit("finish_test")
         });
 
         // Catch message when asynchronous process is complete

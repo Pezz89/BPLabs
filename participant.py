@@ -59,7 +59,7 @@ class Participant:
                 "general_notes": general_notes
             },
 
-            "mat": {
+            "mat_test": {
                 "notes": ''
             },
 
@@ -87,8 +87,8 @@ class Participant:
     def generate_folder_hierachy(self):
         '''
         '''
-        sub_dirs = ["mat", "da_test", "pta",
-                    "click_test", "info", "set_matrix", "eeg_train",
+        sub_dirs = ["mat_test", "da_test", "pta",
+                    "click_test", "info", "eeg_train",
                     "eeg_test", "eeg_test/stimulus"]
         for dir_name in sub_dirs:
             dn = os.path.join(*dir_name.split('/'))

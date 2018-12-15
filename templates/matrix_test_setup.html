@@ -36,19 +36,19 @@
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
 
         $('#load-backup').click(function(event) {
-            socket.emit('load_backup_test', {part_key: $("#participant").val(), test_name: "mat"});
+            socket.emit('load_backup_test', {part_key: $("#participant").val(), test_name: "mat_test"});
             return false;
         })
         $('#load-saved').click(function(event) {
-            socket.emit('load_session', {part_key: $("#participant").val(), test_name: "mat"});
+            socket.emit('load_session', {part_key: $("#participant").val(), test_name: "mat_test"});
             return false;
         })
         $('#submit').click(function(event) {
-            socket.emit('start_test', {listN: $("#listN").val(), part_key: $("#participant").val(), test_name: "mat"});
+            socket.emit('start_test', {listN: $("#listN").val(), part_key: $("#participant").val(), test_name: "mat_test"});
             return false;
         })
 
-        socket.on('participant_start_mat', function(msg) {
+        socket.on('participant_start', function(msg) {
             // Set form test to filepath returned by dialog
             window.location.href = '/matrix_test/clinician/control';
         });

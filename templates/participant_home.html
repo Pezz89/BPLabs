@@ -8,18 +8,4 @@
         {% endfor %}
     </div>
 </div>
-<script>
-    $(document).ready(function(){
-        // Initialise socketio with a namespace called "main"
-        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
-
-        socket.on('participant_start_mat', function() {
-            window.location.href = "/matrix_test/run";
-        });
-
-        socket.on('participant_start_eeg_test', function() {
-            window.location.href = "/eeg/test/run";
-        });
-    });
-</script>
 {% endblock %}

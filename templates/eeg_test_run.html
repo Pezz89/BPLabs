@@ -133,7 +133,7 @@
             displayInstructions();
         });
 
-        socket.on('eeg_test_ready', function(msg) {
+        socket.on('test_ready', function(msg) {
             loading = false;
             waitingDialog.hide();
         });
@@ -147,12 +147,12 @@
             return false;
         });
 
-        socket.on('eeg_stim_playing', function(msg) {
+        socket.on('stim_playing', function(msg) {
             $('.eeg_submit').find('input, textarea, button, select').attr('disabled', 'disabled');
             on()
         });
 
-        socket.on('eeg_stim_done', function(msg) {
+        socket.on('stim_done', function(msg) {
             $('.eeg_submit').find('input, textarea, button, select').removeAttr('disabled');
             off()
         });

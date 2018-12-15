@@ -64,8 +64,13 @@
             $('#progress').css("width", msg.data);
         });
 
-        socket.on('participant_start_mat', function() {
-            window.location.href = "/matrix_test/run";
+        var test_locs = {
+            'mat_test': "/matrix_test/run",
+            'eeg_test': "/eeg/test/run"
+        }
+
+        socket.on('participant_start', function(msg) {
+            window.location.href = test_locs[msg];
         });
 
         socket.on('check-loaded', function(msg) {

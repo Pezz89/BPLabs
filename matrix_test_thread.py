@@ -12,6 +12,7 @@ from shutil import copy2
 
 from pysndfile import sndio, PySndfile
 from matrix_test.filesystem import globDir
+from test_base import BaseThread
 import sounddevice as sd
 import pdb
 
@@ -55,7 +56,7 @@ def abline(slope, intercept):
     plt.plot(x_vals, y_vals, '--')
 
 
-class MatTestThread(Thread):
+class MatTestThread(BaseThread):
     '''
     Thread for running server side matrix test operations
     '''
@@ -65,23 +66,9 @@ class MatTestThread(Thread):
                  listFolder="./matrix_test/stimulus/wav/sentence-lists/",
                  red_coef="./matrix_test/short_concat_stim/reduction_coef.npy",
                  socketio=None, participant=None):
-        super(MatTestThread, self).__init__()
-        self.participant=participant
-        self.newResp = False
-        self.foundSRT = False
-        self.finalised = False
-        self.pageLoaded = False
-        self.clinPageLoaded = False
-        self.partPageLoaded = False
-        self.socketio = socketio
-        # Attach messages from gui to class methods
-        self.socketio.on_event('submit_mat_response', self.submitMatResponse, namespace='/main')
-        self.socketio.on_event('page_loaded', self.setPageLoaded, namespace='/main')
-        self.socketio.on_event('save_file_dialog_resp', self.manualSave, namespace='/main')
-        self.socketio.on_event('load_file_dialog_resp', self.loadStateSocketHandle, namespace='/main')
-        self.socketio.on_event('repeat_stimulus', self.playStimulusSocketHandle, namespace='/main')
-        self.socketio.on_event('finish_test', self.finishTestEarly, namespace='/main')
-        self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
+
+        self.listDir = listFolder
+
 
         self.reduction_coef = np.load(red_coef)
         self.listN = int(listN)
@@ -122,22 +109,25 @@ class MatTestThread(Thread):
         self.img.seek(0)
         self.img.truncate(0)
 
-        self._stopevent = Event()
+        super(MatTestThread, self).__init__('mat_test',
+                                            sessionFilepath=sessionFilepath,
+                                            socketio=socketio,
+                                            participant=participant)
 
-        if self.participant:
-            folder = self.participant.data_paths['mat']
-            self.backupFilepath=os.path.join(folder, 'mat_state.pkl')
-        else:
-            self.backupFilepath='./mat_state.pkl'
+        self.toSave = ['listsRMS', 'y', 'currentList', 'slope', 'snr', 'snrTrack',
+                  'direction', 'noise_rms', 'i', 'currentWords', 'usedLists',
+                  'availableSentenceInds', 'trialN', 'listsString', 'fs',
+                  'nCorrect', 'loadedLists', 'lists', 'listN', 'wordsCorrect',
+                  'responses', 'presentedWords', 'srt_50', 's_50']
+        self.toFinalise = ['snrTrack', 'trialN', 'wordsCorrect',
+                           'presentedWords', 'responses', 'srt_50', 's_50']
 
-        # If loading session from file, load session variables from the file
-        if sessionFilepath:
-            self.loadState(sessionFilepath)
-            self.loadNoise(noiseFilepath, noiseRMSFilepath)
-        else:
-            # Preload audio at start of the test
-            self.loadStimulus(listFolder, n=self.listN)
-            self.loadNoise(noiseFilepath, noiseRMSFilepath)
+        # Attach messages from gui to class methods
+        self.socketio.on_event('submit_response', self.submitMatResponse, namespace='/main')
+        self.socketio.on_event('page_loaded', self.setPageLoaded, namespace='/main')
+        self.socketio.on_event('repeat_stimulus', self.playStimulusSocketHandle, namespace='/main')
+
+        self.loadNoise(noiseFilepath, noiseRMSFilepath)
 
 
     def testLoop(self):
@@ -145,11 +135,12 @@ class MatTestThread(Thread):
         Main loop for iteratively finding the SRT
         '''
         self.waitForPageLoad()
-        while not self.foundSRT and not self._stopevent.isSet():
+        while not self.finishTest and not self._stopevent.isSet():
             self.plotSNR()
-            self.playStimulus()
+            self.y = self.generateTrial(self.snr)
+            self.playStimulus(self.y, self.fs)
             self.waitForResponse()
-            if self.foundSRT:
+            if self.finishTest:
                 break
             if self._stopevent.isSet():
                 return
@@ -165,46 +156,17 @@ class MatTestThread(Thread):
             self.waitForFinalise()
 
 
-    def finishTestEarly(self):
-        self.foundSRT = True
-
-
-    def join(self, timeout=None):
-        """ Stop the thread. """
-        self._stopevent.set()
-        Thread.join(self, timeout)
-
-
-    def waitForResponse(self):
-        while not self.newResp and not self._stopevent.isSet() and not self.foundSRT:
-            self._stopevent.wait(0.2)
-        return
-
-
-    def waitForPageLoad(self):
-        while not self.pageLoaded and not self._stopevent.isSet():
-            self.socketio.emit("check-loaded", namespace='/main')
-            self._stopevent.wait(0.5)
-        return
-
-    def waitForFinalise(self):
-        while not self.finalised and not self._stopevent.isSet():
-            self._stopevent.wait(0.2)
-        return
-
-
     def finaliseResults(self):
-        toSave = ['snrTrack', 'trialN', 'wordsCorrect', 'presentedWords', 'responses', 'srt_50', 's_50']
-        saveDict = {k:self.__dict__[k] for k in toSave}
+        saveDict = {k:self.__dict__[k] for k in self.toFinalise}
         if self.participant:
-            self.participant['mat'].update(saveDict)
-            self.participant.save("mat")
-            backup_path = os.path.join(self.participant.data_paths['mat'],
+            self.participant[self.test_name].update(saveDict)
+            self.participant.save(self.test_name)
+            backup_path = os.path.join(self.participant.data_paths[self.test_name],
                          'finalised_backup.pkl')
             copy2(self.backupFilepath, backup_path)
         else:
             copy2(self.backupFilepath, './finalised_backup.pkl')
-            with open('./Matrix_test_results.pkl', 'wb') as f:
+            with open('./{}_results.pkl'.format(self.test_name), 'wb') as f:
                 dill.dump(saveDict, f)
         self.finalised = True
 
@@ -358,7 +320,7 @@ class MatTestThread(Thread):
             del self.listsRMS[0]
             del self.listsString[0]
             if not len(self.lists):
-                self.foundSRT = True
+                self.finishTest = True
                 self.wordsCorrect[self.trialN-1] = correct
                 return None
             self.availableSentenceInds = list(range(len(self.lists[0])))
@@ -368,21 +330,11 @@ class MatTestThread(Thread):
         self.trialN += 1
 
     def playStimulusSocketHandle(self):
-        self.playStimulus(replay=True)
+        self.playStimulus(self.y, self.fs)
 
-    def playStimulus(self, replay=False):
-        self.newResp = False
-        self.socketio.emit("mat_stim_playing", namespace="/main")
-        if not replay:
-            self.y = self.generateTrial(self.snr)
-        # Play audio
-        sd.play(self.y, self.fs, blocking=True)
-        self.socketio.emit("mat_stim_done", namespace="/main")
-
-
-    def loadStimulus(self, listDir, n=3, demo=False):
+    def loadStimulus(self):
         # Get folder path of all lists in the list directory
-        lists = next(os.walk(listDir))[1]
+        lists = next(os.walk(self.listDir))[1]
         lists.pop(lists.index("demo"))
         # Don't reload an lists that have already been loaded
         pop = [lists.index(x) for x in self.loadedLists]
@@ -392,12 +344,12 @@ class MatTestThread(Thread):
         inds = list(range(len(lists)))
         random.shuffle(inds)
         # Pick first n shuffled lists
-        inds = inds[:n]
+        inds = inds[:self.listN]
         for ind in inds:
             # Get filepaths to the audiofiles and word csv file for the current
             # list
-            listAudiofiles = globDir(os.path.join(listDir, lists[ind]), "*.wav")
-            listCSV = globDir(os.path.join(listDir, lists[ind]), "*.csv")
+            listAudiofiles = globDir(os.path.join(self.listDir, lists[ind]), "*.wav")
+            listCSV = globDir(os.path.join(self.listDir, lists[ind]), "*.csv")
             with open(listCSV[0]) as csv_file:
                 csv_reader = csv.reader(csv_file)
                 # Allocate empty lists to store audio samples, RMS and words of
@@ -427,19 +379,6 @@ class MatTestThread(Thread):
         self.noise_rms = np.load(noiseRMSFilepath)
 
 
-    def unsetPageLoaded(self):
-        self.pageLoaded = False
-        self.partPageLoaded = False
-        self.clinPageLoaded = False
-
-    def setPageLoaded(self, msg):
-        if msg['data'] == "clinician":
-            self.clinPageLoaded = True
-        else:
-            self.partPageLoaded = True
-        self.pageLoaded = self.clinPageLoaded and self.partPageLoaded
-
-
     def generateTrial(self, snr):
         currentSentenceInd = self.availableSentenceInds.pop(0)
         # Convert desired SNR to dB FS
@@ -454,8 +393,8 @@ class MatTestThread(Thread):
         end = start + noiseLen
         self.noise.seek(start)
         x_noise = self.noise.read_frames(end-start)
-        # Scale noise to match the RMS of the speech
-        x_noise = x_noise*(x_rms/self.noise_rms)
+        # Scale speech to match the RMS of the noise
+        x = x*(self.noise_rms/x_rms)
         y = x_noise
         # Set speech to start 500ms after the noise, scaled to the desired SNR
         sigStart = round(self.fs/2.)
@@ -470,40 +409,3 @@ class MatTestThread(Thread):
         '''
         self.response = [x.upper() for x in msg['resp']]
         self.newResp = True
-
-
-    def saveState(self, out="mat_state.pkl"):
-        toSave = ['listsRMS', 'y', 'currentList', 'slope', 'snr', 'snrTrack',
-                  'direction', 'noise_rms', 'i', 'currentWords', 'usedLists',
-                  'availableSentenceInds', 'trialN', 'listsString', 'fs',
-                  'nCorrect', 'loadedLists', 'lists', 'listN', 'wordsCorrect',
-                  'responses', 'presentedWords', 'srt_50', 's_50']
-        saveDict = {k:self.__dict__[k] for k in toSave}
-        with open(out, 'wb') as f:
-            dill.dump(saveDict, f)
-
-
-    def manualSave(self, msg):
-        '''
-        Get and store participant response for current trial
-        '''
-        filepath = msg['data']
-        self.saveState(out=filepath)
-
-
-    def loadStateSocketHandle(self, msg):
-        filepath = msg['data']
-        self.loadState(filepath)
-
-
-    def loadState(self, filepath):
-        with open(filepath, 'rb') as f:
-            backup_dict = dill.load(f)
-        self.__dict__.update(backup_dict)
-
-
-    def run(self):
-        '''
-        This function is called when the thread starts
-        '''
-        return self.testLoop()

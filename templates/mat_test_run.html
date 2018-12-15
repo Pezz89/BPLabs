@@ -89,19 +89,19 @@
             }
             else {
                 $('.mat-button').removeClass("active");
-                socket.emit('submit_mat_response', {
+                socket.emit('submit_response', {
                     resp: choice
                 });
                 choice = Array(5).fill('');
             }
         });
 
-        socket.on('mat_stim_playing', function(msg) {
+        socket.on('stim_playing', function(msg) {
             // Disable all inputs whilst processing
             $('#main-div').find('input, textarea, button, select').attr('disabled','disabled');
         });
 
-        socket.on('mat_stim_done', function(msg) {
+        socket.on('stim_done', function(msg) {
             $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
         });
 

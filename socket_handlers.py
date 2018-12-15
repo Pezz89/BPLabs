@@ -30,16 +30,16 @@ from participant import Participant
 from matrix_test.signalops import play_wav
 
 from config import server, socketio, participants
-from matrix_test_thread import run_matrix_thread
-from eeg_test_thread import run_eeg_test_thread
-from eeg_train_thread import run_eeg_train_thread
-from da_test_thread import run_da_test_thread
 
-thread_runners = {
-    "eeg_test": run_eeg_test_thread,
-    "eeg_train": run_eeg_train_thread,
-    "da_test": run_da_test_thread,
-    "mat": run_matrix_thread
+from da_test_thread import DaTestThread
+from eeg_test_thread import EEGTestThread
+from matrix_test_thread import MatTestThread
+from test_base import run_test_thread
+
+thread_types = {
+    'da_test': DaTestThread,
+    'eeg_test': EEGTestThread,
+    'mat_test': MatTestThread,
 }
 
 '''
@@ -112,64 +112,6 @@ def get_participant_info(key):
     socketio.emit('part_info', participants[key]['info'], namespace='/main')
 
 '''
-EEG training socket handlers
-'''
-@socketio.on('start_eeg_train', namespace='/main')
-def start_eeg_train(msg):
-    '''
-    Relay train start message to participant view
-    '''
-    socketio.emit('participant_start_eeg_train', {'data': ''}, namespace='/main', broadcast=True)
-    part_key = msg['part_key']
-
-    if part_key != "--":
-        participant = participants[part_key]
-    else:
-        participant = None
-
-    run_eeg_train_thread(participant=participant)
-
-
-@socketio.on('load_eeg_train_backup', namespace='/main')
-def start_backup_eeg_train(msg):
-    '''
-    Relay train start message to participant view
-    '''
-    socketio.emit('participant_start_eeg_train', {'data': ''}, namespace='/main', broadcast=True)
-    part_key = msg['part_key']
-    if part_key != "--":
-        participant = participants[part_key]
-        folder = participant.data_paths["eeg_train_data"]
-        backupPath = os.path.join(folder, "eeg_train_state.pkl")
-    else:
-        participant = None
-        backupPath = './eeg_train_state.pkl'
-
-    run_eeg_train_thread(sessionFilepath=backupPath, participant=participant)
-
-
-@socketio.on('load_eeg_train_session', namespace='/main')
-def start_saved_eeg_train(msg):
-    '''
-    Relay train start message to participant view
-    '''
-    filepath = webview.create_file_dialog(dialog_type=webview.OPEN_DIALOG, file_types=("Python Pickle (*.pkl)",))
-    if filepath and len(filepath) > 0:
-        filepath = filepath[0]
-        if isinstance(filepath, bytes):
-            filepath = filepath.decode("utf-8")
-    else:
-        return None
-
-    part_key = msg['part_key']
-    if part_key != "--":
-        participant = participants[part_key]
-    else:
-        participant = None
-    socketio.emit('participant_start_eeg_train', {'data': ''}, namespace='/main', broadcast=True)
-    run_eeg_train_thread(sessionFilepath=filepath, participant=participant)
-
-'''
 EEG test socket handlers
 '''
 
@@ -177,7 +119,7 @@ EEG test socket handlers
 def start_test(msg):
     test_name = msg.pop('test_name')
     part_key = msg.pop('part_key')
-    thread_runner = thread_runners[test_name]
+    thread_type = thread_types[test_name]
     socketio.emit('participant_start_{}'.format(test_name), namespace='/main')
 
     if part_key != "--":
@@ -185,62 +127,8 @@ def start_test(msg):
     else:
         raise ValueError("Participant must be selected...")
 
-    thread_runner(participant=participant, **msg)
-
-@socketio.on('start_eeg_test', namespace='/main')
-def start_eeg_test(msg):
-    '''
-    Relay test start message to participant view
-    '''
-    socketio.emit('participant_start_eeg_test', {'data': ''}, namespace='/main', broadcast=True)
-    part_key = msg['part_key']
-
-    if part_key != "--":
-        participant = participants[part_key]
-    else:
-        participant = None
-
-    run_eeg_test_thread(participant=participant)
-
-
-@socketio.on('load_eeg_test_backup', namespace='/main')
-def start_backup_eeg_test(msg):
-    '''
-    Relay test start message to participant view
-    '''
-    socketio.emit('participant_start_eeg_test', {'data': ''}, namespace='/main', broadcast=True)
-    part_key = msg['part_key']
-    if part_key != "--":
-        participant = participants[part_key]
-        folder = participant.data_paths["eeg_test"]
-        backupPath = os.path.join(folder, "eeg_test_state.pkl")
-    else:
-        participant = None
-        backupPath = './eeg_test_state.pkl'
-
-    run_eeg_test_thread(sessionFilepath=backupPath, participant=participant)
-
-
-@socketio.on('load_eeg_test_session', namespace='/main')
-def start_saved_eeg_test(msg):
-    '''
-    Relay test start message to participant view
-    '''
-    filepath = webview.create_file_dialog(dialog_type=webview.OPEN_DIALOG, file_types=("Python Pickle (*.pkl)",))
-    if filepath and len(filepath) > 0:
-        filepath = filepath[0]
-        if isinstance(filepath, bytes):
-            filepath = filepath.decode("utf-8")
-    else:
-        return None
-
-    part_key = msg['part_key']
-    if part_key != "--":
-        participant = participants[part_key]
-    else:
-        participant = None
-    socketio.emit('participant_start_eeg_test', {'data': ''}, namespace='/main', broadcast=True)
-    run_eeg_test_thread(sessionFilepath=filepath, participant=participant)
+    socketio.emit('participant_start', test_name, namespace='/main', broadcast=True)
+    run_test_thread(test_name, thread_type, participant=participant, **msg)
 
 
 @socketio.on('load_backup_test', namespace='/main')
@@ -251,17 +139,17 @@ def load_backup_test(msg):
 
     test_name = msg.pop('test_name')
     part_key = msg.pop('part_key')
-    thread_runner = thread_runners[test_name]
+    thread_type = thread_types[test_name]
     socketio.emit('participant_start_{}'.format(test_name), namespace='/main')
     if part_key != "--":
         participant = participants[part_key]
         folder = participant.data_paths[test_name]
         backupPath = os.path.join(folder, "{}_state.pkl".format(test_name))
     else:
-        participant = None
-        backupPath = './{}_state.pkl'.format(test_name)
+        raise ValueError("Participant must be selected...")
 
-    thread_runner(sessionFilepath=backupPath, participant=participant, **msg)
+    socketio.emit('participant_start', test_name, namespace='/main', broadcast=True)
+    run_test_thread(test_name, thread_type, sessionFilepath=backupPath, participant=participant, **msg)
 
 
 @socketio.on('load_mat_session', namespace='/main')

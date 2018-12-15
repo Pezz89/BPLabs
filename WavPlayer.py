@@ -11,6 +11,11 @@ def play_wav_async(wav_file, stop_string):
     wavThread.start()
     return wavThread
 
+def play_wav(wav_file, stop_string):
+    wavThread = WavPlayer(wav_file, socketio=socketio, stop_string=stop_string)
+    wavThread.run()
+    return wavThread
+
 class WavPlayer(Thread):
     '''
     Thread for running server side matrix test operations
@@ -25,7 +30,10 @@ class WavPlayer(Thread):
     def join(self, timeout=None):
         """ Stop the thread. """
         self._stopevent.set()
-        Thread.join(self, timeout)
+        try:
+            Thread.join(self, timeout)
+        except RuntimeError:
+            pass
 
 
     def play_wav_async(self, wav_file, buffersize=20, blocksize=1024, socketio=None):
