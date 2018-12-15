@@ -33,10 +33,12 @@ from config import server, socketio, participants
 from matrix_test_thread import run_matrix_thread
 from eeg_test_thread import run_eeg_test_thread
 from eeg_train_thread import run_eeg_train_thread
+from da_test_thread import run_da_test_thread
 
 thread_runners = {
     "eeg_test": run_eeg_test_thread,
     "eeg_train": run_eeg_train_thread,
+    "da_test": run_da_test_thread,
     "mat": run_matrix_thread
 }
 

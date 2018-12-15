@@ -195,10 +195,26 @@ def clickStim():
 '''
 /da/ stimulus routing
 '''
-@server.route('/da_stim')
-def daStim():
-    return render_template("da_stim.html")
+@server.route('/da/setup')
+def da_setup():
+    participants = find_participants()
+    return render_template("da_test_setup.html", part_keys=participants.keys())
 
+@server.route('/da/clinician/run')
+def da_clinician_run():
+    return render_template("da_test_clinician_view.html")
+
+@server.route('/da/clinician/complete')
+def da_clinician_complete():
+    return render_template("da_test_clinician_complete.html")
+
+@server.route('/da/run')
+def da_run():
+    return render_template("da_test_run.html")
+
+@server.route('/da/complete')
+def da_complete():
+    return render_template("da_test_run.html")
 
 '''
 Calibration routing

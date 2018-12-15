@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+from scipy.signal import square
 from pysndfile import sndio
 import numpy as np
 import pdb
 import matplotlib.pyplot as plt
 
+def gen_click(idx, freq, length, fs):
+    duty = length*freq
+    trigger = square(2*np.pi*(idx/fs)*freq, duty=duty)
+    trigger[trigger < 0] = 0
+    return trigger
+
 def main():
     '''
     '''
-    da_file = './BioMAP_da-40ms.wav'
-    da_stim, fs, enc, fmt = sndio.read(da_file, return_format=True)
-    prestim_size = 0.0158
-    full_stim_size = 0.09174311926605504
-    da_size = 0.04
-    prestim = np.zeros(int(fs*prestim_size))
-    poststim = np.zeros(int(fs*((full_stim_size-prestim_size)-da_size)))
-    y_part = np.concatenate([prestim, da_stim, poststim])
-    y_part_inv = -y_part
-
-    y_2part = np.concatenate([y_part, y_part_inv])
-    pdb.set_trace()
-    y = np.tile(y_2part, 1500)
-    sndio.write('./3000_da.wav', y, rate = fs, format = fmt, enc=enc)
-
+    freq = 20.0
+    fs = 44100
+    period = fs/freq
+    length = period * 3000.
+    y = (np.arange(length) % period == 0).astype(float)
+    y[np.where(y == 1.0)[0][1::2]] = -1.0
+    y = np.concatenate([np.zeros(fs), y, np.zeros(fs)])
+    print("Number of clicks generated: {}".format(np.sum(np.abs(y) == 1.0)))
+    sndio.write('./click_3000_20Hz.wav', y, rate = fs, format='wav', enc='pcm16')
 
 if __name__ == "__main__":
     main()
