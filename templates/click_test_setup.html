@@ -1,0 +1,58 @@
+{% extends 'index.html' %}
+{% block content %}
+<div class="card">
+    <div id="main-div" class="card-body">
+        <form action="{{ url_for('matDecStim') }}" method="POST">
+            <div class="form-group">
+                <select class="form-control" name="participant" id="participant">
+                    <option>--</option>
+                    {% for p in part_keys %}
+                    <option>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group d-flex justify-content-center">
+                <button type="button" id="start_test" class="btn btn-primary mx-3">Start data collection</button>
+                <button type="button" id="load-saved" class="btn btn-primary mx-3">Load saved session</button>
+                <button type="button" id="load-backup" class="btn btn-primary mx-3">Load previous automatic backup</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    $(document).ready(function(){
+        // Initialise socketio with a namespace called "main"
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+
+        $('#load-backup').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('load_backup_test', {part_key: $("#participant").val(), test_name: "click_test"});
+            return false;
+        })
+        $('#load-saved').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('load_session', {part_key: $("#participant").val(), test_name: "click_test"});
+            return false;
+        })
+        $('#start_test').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('start_test', {part_key: $("#participant").val(), test_name: "click_test"});
+            return false;
+        })
+
+        socket.on('participant_start_click_test', function(msg) {
+            window.location.href = '/click/clinician/run';
+        });
+
+        socket.on('save-dialog-resp', function(msg) {
+            // Set form test to filepath returned by dialog
+            document.getElementById("save-dir").value = msg.data
+        });
+
+        socket.on('click-dialog-resp', function(msg) {
+            // Set form test to filepath returned by dialog
+            document.getElementById("da-dir").value = msg.data
+        });
+    });
+</script>
+{% endblock %}

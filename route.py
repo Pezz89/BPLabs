@@ -187,9 +187,26 @@ def matDecStim():
 '''
 Click stimulus routing
 '''
-@server.route('/click_stim')
-def clickStim():
-    return render_template("click_stim.html")
+@server.route('/click/setup')
+def click_setup():
+    participants = find_participants()
+    return render_template("click_test_setup.html", part_keys=participants.keys())
+
+@server.route('/click/clinician/run')
+def click_clinician_run():
+    return render_template("click_test_clinician_view.html")
+
+@server.route('/click/clinician/complete')
+def click_clinician_complete():
+    return render_template("click_test_clinician_end.html")
+
+@server.route('/click/run')
+def click_run():
+    return render_template("click_test_run.html")
+
+@server.route('/click/complete')
+def click_complete():
+    return render_template("click_test_end.html")
 
 
 '''
@@ -206,7 +223,7 @@ def da_clinician_run():
 
 @server.route('/da/clinician/complete')
 def da_clinician_complete():
-    return render_template("da_test_clinician_complete.html")
+    return render_template("da_test_clinician_end.html")
 
 @server.route('/da/run')
 def da_run():
@@ -214,7 +231,7 @@ def da_run():
 
 @server.route('/da/complete')
 def da_complete():
-    return render_template("da_test_run.html")
+    return render_template("da_test_end.html")
 
 '''
 Calibration routing

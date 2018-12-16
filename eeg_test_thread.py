@@ -11,7 +11,6 @@ import pandas as pd
 from shutil import copy2
 
 from test_base import BaseThread, run_test_thread
-from WavPlayer import play_wav
 from scipy.special import logit
 from config import socketio
 import csv
@@ -144,12 +143,6 @@ class EEGTestThread(BaseThread):
         self.answers[incomplete_responses] = np.nan
         self.fillTable()
 
-    def finishTestEarly(self):
-        '''
-        '''
-        self.finishTest = True
-
-
     def finaliseResults(self):
         toSave = ['marker_files', 'clinPageLoaded', 'wav_files', 'participant',
                   'response', 'backupFilepath', 'noise_path', 'question_files',
@@ -180,9 +173,9 @@ class EEGTestThread(BaseThread):
         # Play audio
         # sd.play(self.y, self.fs, blocking=True)
         if not self.dev_mode:
-            play_wav(wav_file, 'finish_test')
+            self.play_wav(wav_file, 'finish_test')
         else:
-            play_wav('./test.wav', 'finish_test')
+            self.play_wav('./test.wav', 'finish_test')
 
         self.socketio.emit("stim_done", namespace="/main")
 

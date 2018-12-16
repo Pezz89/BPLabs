@@ -17,11 +17,29 @@
                 <input type="text" id="behav_res" name='behav_res' value="./Matrix_test_results.pkl" style="width:85%"></input>
                 <button type="button" id="behav_res_button"  class="btn btn-primary">Browse...</button>
             </div>
-            <div class="form-group d-flex justify-content-center">
-                <button type="button" id="start_eeg_train" class="btn btn-primary mx-3">Start training data collection</button>
-                <button type="button" id="start_eeg_test" class="btn btn-primary mx-3">Start test data collection</button>
-                <button type="button" id="load-saved" class="btn btn-primary mx-3">Load saved session</button>
-                <button type="button" id="load-backup" class="btn btn-primary mx-3">Load previous automatic backup</button>
+            <div class="form-group container-fluid">
+                <div class="row">
+                    <div class="col text-center mb-3">
+                        <button type="button" id="start_eeg_train" class="btn btn-primary mx-3">Start training data collection</button>
+                    </div>
+                    <div class="col text-center mb-3">
+                        <button type="button" id="load_train_saved" class="btn btn-primary mx-3">Load saved session</button>
+                    </div>
+                    <div class="col text-center mb-3">
+                        <button type="button" id="load_train_backup" class="btn btn-primary mx-3">Load previous automatic backup</button>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col text-center mb-3">
+                        <button type="button" id="start_eeg_test" class="btn btn-primary mx-3">Start test data collection</button>
+                    </div>
+                    <div class="col text-center mb-3">
+                        <button type="button" id="load_test_saved" class="btn btn-primary mx-3">Load saved session</button>
+                    </div>
+                    <div class="col text-center mb-3">
+                        <button type="button" id="load_test_backup" class="btn btn-primary mx-3">Load previous automatic backup</button>
+                    </div>
+                </div>
             </div>
         </form>
     </div>
@@ -31,21 +49,34 @@
         // Initialise socketio with a namespace called "main"
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
 
-        $('#load-backup').click(function(event) {
+        $('#load_test_backup').click(function(event) {
             // Send message to call stimulus generation function in Python
             socket.emit('load_backup_test', {part_key: $("#participant").val(), test_name: "eeg_test"});
             return false;
         })
-        $('#load-saved').click(function(event) {
+        $('#load_test_saved').click(function(event) {
             // Send message to call stimulus generation function in Python
             socket.emit('load_session', {part_key: $("#participant").val(), test_name: "eeg_test"});
             return false;
         })
+
+        $('#load_train_backup').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('load_backup_test', {part_key: $("#participant").val(), test_name: "eeg_train"});
+            return false;
+        })
+        $('#load_train_saved').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('load_session', {part_key: $("#participant").val(), test_name: "eeg_train"});
+            return false;
+        })
+
         $('#start_eeg_train').click(function(event) {
             // Send message to call stimulus generation function in Python
             socket.emit('start_test', {part_key: $("#participant").val(), test_name: "eeg_train"});
             return false;
         })
+
         $('#start_eeg_test').click(function(event) {
             // Send message to call stimulus generation function in Python
             socket.emit('start_test', {part_key: $("#participant").val(), test_name: "eeg_test"});

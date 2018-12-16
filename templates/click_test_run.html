@@ -1,0 +1,92 @@
+{% extends 'participant_index.html' %}
+{% block content %}
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+<div id="main-div" class="outer">
+    <div id="overlay">
+        <span id="overlay_crosshair">&#10010;</span>
+    </div>
+    <div id="instructions">
+        <div class="card">
+            <div class="card-body">
+                <h2>Instructions</h2>
+                <p>
+                In this test, you will be presented with repeated click sounds.
+                Simply listen to the stimulus, you do not need to respond.
+                </p>
+                <button type="button" href="#" id="instr_continue" class="Btn Btn-primary">Continue</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        jQuery.expr[':'].contains = function(a, i, m) {
+        return jQuery(a).text().toUpperCase()
+            .indexOf(m[3].toUpperCase()) >= 0;
+        };
+        // Initialise socketio with a namespace called "main"
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+        var loading = true;
+        var part_ready = false;
+        waitingDialog.show('Loading... Please wait');
+
+        function displayInstructions() {
+            $("#instructions").css("display", "table-cell");
+            $("#instructions").fadeIn();
+            waitingDialog.hide();
+        }
+
+        function hideInstructions() {
+            $("#instructions").css("display", "none");
+            $("#instructions").fadeOut();
+            if(loading) {
+                waitingDialog.show('Loading... Please wait');
+            }
+        }
+
+
+        $('#instr_continue').click(function(event) {
+            hideInstructions();
+            part_ready = true;
+            socket.emit("part_ready")
+            on()
+        });
+
+        socket.on('display_instructions', function(msg) {
+            displayInstructions();
+        });
+
+        socket.on('test_ready', function(msg) {
+            loading = false;
+            waitingDialog.hide();
+        });
+
+        socket.on('stim_playing', function(msg) {
+            on()
+        });
+
+        socket.on('stim_done', function(msg) {
+            off()
+        });
+
+        function on() {
+            $("#overlay").css("display", "table-cell");
+            $("#overlay_crosshair").css("display", "inline");
+            $("#overlay").fadeIn();
+            $("#overlay_crosshair").fadeIn();
+        }
+
+        function off() {
+            $("#overlay").fadeOut();
+        }
+
+        socket.on('processing-complete', function(msg) {
+            // Re-enable all inputs
+            $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
+            alert("Click stimulus processing complete!")
+            window.location.href = '/click/complete';
+        });
+    });
+</script>
+{% endblock %}

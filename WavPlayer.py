@@ -24,7 +24,6 @@ class WavPlayer(Thread):
         super(WavPlayer, self).__init__()
         self.socketio = socketio
         self._stopevent = Event()
-        self.socketio.on_event(stop_string, self.join, namespace='/main')
         self.wav_file = wav_file
 
     def join(self, timeout=None):

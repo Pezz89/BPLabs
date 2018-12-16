@@ -1,0 +1,22 @@
+{% extends 'index.html' %}
+{% block content %}
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+<div class="card">
+    <div id="main-div" class="card-body">
+        <div class="d-flex justify-content-center mt-2" role="group">
+            <button type="button" id="mat-save" class="btn btn-primary mx-3">Save and finish test</button>
+        </div>
+    </div>
+</div>
+<script>
+$(document).ready(function(){
+    // Initialise socketio with a namespace called "main"
+    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+
+    $('#mat-save').click(function(event) {
+        socket.emit("finalise_results")
+        window.location.href = '/home';
+    });
+});
+</script>
+{% endblock %}

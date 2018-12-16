@@ -34,12 +34,14 @@ from config import server, socketio, participants
 from da_test_thread import DaTestThread
 from eeg_test_thread import EEGTestThread
 from matrix_test_thread import MatTestThread
+from click_test_thread import ClickTestThread
 from test_base import run_test_thread
 
 thread_types = {
     'da_test': DaTestThread,
     'eeg_test': EEGTestThread,
     'mat_test': MatTestThread,
+    'click_test': ClickTestThread,
 }
 
 '''
