@@ -1,0 +1,73 @@
+{% extends 'index.html' %}
+{% block content %}
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+<div class="card">
+    <div id="main-div" class="card-body">
+        <table id="eeg_test_table" class="table table-sm table">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col">Trial #</th>
+                    <th scope="col">1</th>
+                    <th scope="col">2</th>
+                    <th scope="col">3</th>
+                    <th scope="col">4</th>
+                    <th scope="col">5</th>
+                    <th scope="col">6</th>
+                    <th scope="col">7</th>
+                    <th scope="col">8</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="Q1">
+                    <th scope="row">Q</th>
+                    <td class="T1">-</td>
+                    <td class="T2">-</td>
+                    <td class="T3">-</td>
+                    <td class="T4">-</td>
+                    <td class="T5">-</td>
+                    <td class="T6">-</td>
+                    <td class="T7">-</td>
+                    <td class="T8">-</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="d-flex justify-content-center mt-2" role="group">
+            <button type="button" id="test_save" class="btn btn-primary mx-3">Save test state</button>
+            <button type="button" id="test_finish" class="btn btn-primary mx-3">Finish test</button>
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function(){
+        // Initialise socketio with a namespace called "main"
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+        // Check if matrix stimulus is currently being processed
+        waitingDialog.show('Generating stimulus');
+
+        socket.on('test_ready', function(msg) {
+            waitingDialog.hide();
+        });
+
+        socket.on('test_fill_table', function(msg) {
+            for(i = 0; i < msg['data'].length; i++) {
+                $(`#Q1 > .T${i+1}`).text(String.fromCharCode(msg['data'][i][j]));
+            }
+        });
+
+        $('#test_save').click(function(event) {
+            socket.emit("open_save_file_dialog")
+        });
+
+        $('#test_finish').click(function(event) {
+            socket.emit("finish_test")
+        });
+
+        // Catch message when asynchronous process is complete
+        socket.on('processing-complete', function(msg) {
+            alert("Stimulus processing complete!")
+            window.location.href = '/eeg/train/story/clinician/complete';
+        });
+
+    });
+</script>
+{% endblock %}

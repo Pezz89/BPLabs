@@ -140,21 +140,37 @@ def eeg_test_clinician_control():
 def eeg_test_clinician_end():
     return render_template("eeg_test_clinician_end.html")
 
-@server.route('/eeg/train/run')
-def eeg_train_run():
-    return render_template("eeg_train_run.html")
+@server.route('/eeg/train/story/run')
+def eeg_story_train_run():
+    return render_template("eeg_story_train_run.html")
 
-@server.route('/eeg/train/complete')
-def eeg_train_end():
-    return render_template("eeg_train_end.html")
+@server.route('/eeg/train/story/complete')
+def eeg_story_train_end():
+    return render_template("eeg_story_train_end.html")
 
-@server.route('/eeg/train/clinician/control')
-def eeg_train_clinician_control():
-    return render_template("eeg_train_clinician_view.html")
+@server.route('/eeg/train/story/clinician/control')
+def eeg_story_train_clinician_control():
+    return render_template("eeg_story_train_clinician_view.html")
 
-@server.route('/eeg/train/clinician/complete')
-def eeg_train_clinician_end():
-    return render_template("eeg_train_clinician_end.html")
+@server.route('/eeg/train/story/clinician/complete')
+def eeg_story_train_clinician_end():
+    return render_template("eeg_story_train_clinician_end.html")
+
+@server.route('/eeg/train/mat/run')
+def eeg_mat_train_run():
+    return render_template("eeg_mat_train_run.html")
+
+@server.route('/eeg/train/mat/complete')
+def eeg_mat_train_end():
+    return render_template("eeg_mat_train_end.html")
+
+@server.route('/eeg/train/mat/clinician/control')
+def eeg_mat_train_clinician_control():
+    return render_template("eeg_mat_train_clinician_view.html")
+
+@server.route('/eeg/train/mat/clinician/complete')
+def eeg_mat_train_clinician_end():
+    return render_template("eeg_mat_train_clinician_end.html")
 
 '''
 Matrix behavioral test routing

@@ -35,6 +35,8 @@ from da_test_thread import DaTestThread
 from eeg_test_thread import EEGTestThread
 from matrix_test_thread import MatTestThread
 from click_test_thread import ClickTestThread
+from eeg_mat_train_thread import EEGMatTrainThread
+from eeg_story_train_thread import EEGStoryTrainThread
 from test_base import run_test_thread
 
 thread_types = {
@@ -42,6 +44,8 @@ thread_types = {
     'eeg_test': EEGTestThread,
     'mat_test': MatTestThread,
     'click_test': ClickTestThread,
+    'eeg_mat_train': EEGMatTrainThread,
+    'eeg_story_train': EEGStoryTrainThread
 }
 
 '''

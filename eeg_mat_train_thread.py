@@ -33,7 +33,7 @@ def set_trace():
     pdb.set_trace()
 
 
-class DaTestThread(BaseThread):
+class EEGMatTrainThread(BaseThread):
     '''
     Thread for running server side matrix test operations
     '''

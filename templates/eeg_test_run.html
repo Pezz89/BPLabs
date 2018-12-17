@@ -67,7 +67,10 @@
         <button type="button" href="#" disabled id="eeg-submit" class="Btn Btn-primary">Submit</button>
     </div>
     <div id="overlay">
-        <span id="overlay_crosshair">&#10010;</span>
+        <div id="overlay_q">
+            <p id="overlay_q1"></p>
+            <p id="overlay_q2"></p>
+        </div>
     </div> 
     <div id="instructions">
         <div class="card">
@@ -130,10 +133,14 @@
         socket.on('display_instructions', function(msg) {
             $("#sentence_1").text(msg['sentence_1'])
             $("#sentence_2").text(msg['sentence_2'])
+            $("#overlay_q1").text("Q1: "+msg['sentence_1'])
+            $("#overlay_q2").text("Q2: "+msg['sentence_2'])
             displayInstructions();
         });
 
         socket.on('test_ready', function(msg) {
+            $("#overlay_q1").text("Q1: "+msg['sentence_1'])
+            $("#overlay_q2").text("Q2: "+msg['sentence_2'])
             loading = false;
             waitingDialog.hide();
         });
@@ -181,9 +188,9 @@
 
         function on() {
             $("#overlay").css("display", "table-cell");
-            $("#overlay_crosshair").css("display", "inline");
+            $("#overlay_q").css("display", "inline");
             $("#overlay").fadeIn();
-            $("#overlay_crosshair").fadeIn();
+            $("#overlay_q").fadeIn();
         }
 
         function off() {

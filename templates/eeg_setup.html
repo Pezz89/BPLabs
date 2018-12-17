@@ -20,13 +20,24 @@
             <div class="form-group container-fluid">
                 <div class="row">
                     <div class="col text-center mb-3">
-                        <button type="button" id="start_eeg_train" class="btn btn-primary mx-3">Start training data collection</button>
+                        <button type="button" id="start_mat_train" class="btn btn-primary mx-3">Start matrix training data collection</button>
                     </div>
                     <div class="col text-center mb-3">
-                        <button type="button" id="load_train_saved" class="btn btn-primary mx-3">Load saved session</button>
+                        <button type="button" id="load_mat_train_saved" class="btn btn-primary mx-3">Load saved session</button>
                     </div>
                     <div class="col text-center mb-3">
-                        <button type="button" id="load_train_backup" class="btn btn-primary mx-3">Load previous automatic backup</button>
+                        <button type="button" id="load_mat_train_backup" class="btn btn-primary mx-3">Load previous automatic backup</button>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col text-center mb-3">
+                        <button type="button" id="start_story_train" class="btn btn-primary mx-3">Start story training data collection</button>
+                    </div>
+                    <div class="col text-center mb-3">
+                        <button type="button" id="load_train_story_saved" class="btn btn-primary mx-3">Load saved session</button>
+                    </div>
+                    <div class="col text-center mb-3">
+                        <button type="button" id="load_train_story_backup" class="btn btn-primary mx-3">Load previous automatic backup</button>
                     </div>
                 </div>
                 <div class="row">
@@ -60,20 +71,38 @@
             return false;
         })
 
-        $('#load_train_backup').click(function(event) {
+        $('#load_mat_train_backup').click(function(event) {
             // Send message to call stimulus generation function in Python
-            socket.emit('load_backup_test', {part_key: $("#participant").val(), test_name: "eeg_train"});
+            socket.emit('load_backup_test', {part_key: $("#participant").val(), test_name: "eeg_mat_train"});
             return false;
         })
-        $('#load_train_saved').click(function(event) {
+        $('#load_mat_train_saved').click(function(event) {
             // Send message to call stimulus generation function in Python
-            socket.emit('load_session', {part_key: $("#participant").val(), test_name: "eeg_train"});
+            socket.emit('load_session', {part_key: $("#participant").val(), test_name: "eeg_mat_train"});
             return false;
         })
 
-        $('#start_eeg_train').click(function(event) {
+        $('#start_mat_train').click(function(event) {
             // Send message to call stimulus generation function in Python
-            socket.emit('start_test', {part_key: $("#participant").val(), test_name: "eeg_train"});
+            socket.emit('start_test', {part_key: $("#participant").val(), test_name: "eeg_mat_train"});
+            return false;
+        })
+
+
+        $('#load_story_train_backup').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('load_backup_test', {part_key: $("#participant").val(), test_name: "eeg_story_train"});
+            return false;
+        })
+        $('#load_story_train_saved').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('load_session', {part_key: $("#participant").val(), test_name: "eeg_story_train"});
+            return false;
+        })
+
+        $('#start_story_train').click(function(event) {
+            // Send message to call stimulus generation function in Python
+            socket.emit('start_test', {part_key: $("#participant").val(), test_name: "eeg_story_train"});
             return false;
         })
 
@@ -85,6 +114,14 @@
 
         socket.on('participant_start_eeg_test', function(msg) {
             window.location.href = '/eeg/test/clinician/control';
+        });
+
+        socket.on('participant_start_eeg_mat_train', function(msg) {
+            window.location.href = '/eeg/train/mat/clinician/control';
+        });
+
+        socket.on('participant_start_eeg_story_train', function(msg) {
+            window.location.href = '/eeg/train/story/clinician/control';
         });
 
         socket.on('save-dialog-resp', function(msg) {

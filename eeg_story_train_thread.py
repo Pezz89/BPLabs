@@ -33,28 +33,29 @@ def set_trace():
     pdb.set_trace()
 
 
-class DaTestThread(BaseThread):
+class EEGStoryTrainThread(BaseThread):
     '''
     Thread for running server side matrix test operations
     '''
     def __init__(self, sessionFilepath=None,
-                 stimFolder='./da_stim/', nTrials=2,
+                 stimFolder='./eeg_story_stim/', nTrials=2,
                  socketio=None, participant=None, srt_50=None, s_50=None):
-        self.wav_file = os.path.join(stimFolder, '3000_da.wav')
-
-        self.test_name = 'da_test'
+        self.test_name = 'eeg_story_train'
+        self.stimDir = stimFolder
         self.nTrials = nTrials
         self.trial_ind = 0
         self._stopevent = Event()
 
-        super(DaTestThread, self).__init__(self.test_name,
+        super(EEGStoryTrainThread, self).__init__(self.test_name,
                                            sessionFilepath=sessionFilepath,
                                            socketio=socketio,
                                            participant=participant)
 
         self.toSave = ['trial_ind', 'nTrials', 'wav_file', 'test_name']
 
+
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
+        self.loadStimulus()
 
         self.dev_mode = True
 
@@ -64,18 +65,37 @@ class DaTestThread(BaseThread):
         Main loop for iteratively finding the SRT
         '''
         self.waitForPageLoad()
+        self.loadResponse()
         self.socketio.emit('test_ready', namespace='/main')
-        for self.trial_ind in range(self.nTrials):
+        # For each stimulus
+        trials = list(zip(self.wav_files, self.question))[self.trial_ind:]
+        for (wav, q) in trials:
             self.displayInstructions()
             self.waitForPartReady()
             if self._stopevent.isSet() or self.finishTest:
                 break
             # Play concatenated matrix sentences at set SNR
-            self.playStimulus(self.wav_file)
-            self.saveState(out=self.backupFilepath)
+            self.playStimulus(wav)
+            self.setMatrix(q)
+        self.saveState(out=self.backupFilepath)
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
             self.socketio.emit('processing-complete', namespace='/main')
+            self.waitForPageLoad()
+            self.fillTable()
+
+
+    def fillTable(self):
+        '''
+        '''
+        symb = [[symb_dict[x], symb_dict[y]] for x, y in self.answers if not np.isnan([x, y]).any()]
+        self.socketio.emit('test_fill_table', {'data': symb}, namespace='/main')
+
+
+    def loadStimulus():
+        wav_files = natsorted(globDir(self.stimDir, '*.wav'))
+        q_files = natsorted(globDir(self.stimDir, '*.csv'))
+        set_trace()
 
 
     def displayInstructions(self):
@@ -101,6 +121,8 @@ class DaTestThread(BaseThread):
         '''
         '''
         #audio, fs, enc, fmt = sndio.read(wav, return_format=True)
+        self.answers = np.empty(np.shape(self.question)[:2])
+        self.answers[:] = np.nan
 
 
     def saveState(self, out="test_state.pkl"):
