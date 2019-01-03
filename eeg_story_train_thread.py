@@ -47,7 +47,7 @@ class EEGStoryTrainThread(BaseThread):
 
         self.selected_q = []
         self.question = []
-        self.answers = []
+        self.answers = [''] * 8
         self.wav_files = []
         self.q_files = []
 
@@ -94,6 +94,7 @@ class EEGStoryTrainThread(BaseThread):
             if self._stopevent.isSet() or self.finishTest:
                 return
             self.processResponse()
+            self.trial_ind += 1
         self.saveState(out=self.backupFilepath)
         if not self._stopevent.isSet():
             self.unsetPageLoaded()

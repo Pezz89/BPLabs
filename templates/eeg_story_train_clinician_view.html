@@ -83,10 +83,9 @@
             waitingDialog.hide();
         });
 
-        socket.on('test_fill_table', function(msg) {
-            for(i = 0; i < msg['data'].length; i++) {
-                $(`#Q1 > .T${i+1} > button`).attr("title", msg['data'][i]);
-            }
+        socket.on('test_resp', function(msg) {
+            debugger;
+            $(`#Q1 > .T${parseInt(msg['trial_ind'])+1} > button`).attr("data-original-title", msg['ans']).tooltip('show');
         });
 
         $('#test_save').click(function(event) {
