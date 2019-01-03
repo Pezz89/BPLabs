@@ -21,42 +21,42 @@
                 <tr id="Q1">
                     <th scope="row">Q</th>
                     <td class="T1">
-                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
                             Ans
                         </button>
                     </td>
                     <td class="T2">
-                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
                             Ans
                         </button>
                     </td>
                     <td class="T3">
-                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
                             Ans
                         </button>
                     </td>
                     <td class="T4">
-                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
                             Ans
                         </button>
                     </td>
                     <td class="T5">
-                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
                             Ans
                         </button>
                     </td>
                     <td class="T6">
-                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
                             Ans
                         </button>
                     </td>
                     <td class="T7">
-                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
                             Ans
                         </button>
                     </td>
                     <td class="T8">
-                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
                             Ans
                         </button>
                     </td>
@@ -84,7 +84,6 @@
         });
 
         socket.on('test_resp', function(msg) {
-            debugger;
             $(`#Q1 > .T${parseInt(msg['trial_ind'])+1} > button`).attr("data-original-title", msg['ans']).tooltip('show');
         });
 

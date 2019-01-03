@@ -1,3 +1,78 @@
 {% extends 'index.html' %}
 {% block content %}
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+<div class="card">
+    <div id="main-div" class="card-body">
+        <table id="eeg_test_table" class="table table-sm table">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col">Trial #</th>
+                    <th scope="col">1</th>
+                    <th scope="col">2</th>
+                    <th scope="col">3</th>
+                    <th scope="col">4</th>
+                    <th scope="col">5</th>
+                    <th scope="col">6</th>
+                    <th scope="col">7</th>
+                    <th scope="col">8</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="Q1">
+                    <th scope="row">Q</th>
+                    <td class="T1">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T2">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T3">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T4">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T5">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T6">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T7">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T8">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom">
+                            Ans
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+    $(document).ready(function(){
+        // Initialise socketio with a namespace called "main"
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+        socket.on('test_resp', function(msg) {
+            console.log("Yup");
+            $(`#Q1 > .T${parseInt(msg['trial_ind'])+1} > button`).attr("data-original-title", msg['ans']).tooltip('show');
+        });
+    });
+</script>
 {% endblock %}

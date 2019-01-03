@@ -89,12 +89,12 @@
         })
 
 
-        $('#load_story_train_backup').click(function(event) {
+        $('#load_train_story_backup').click(function(event) {
             // Send message to call stimulus generation function in Python
             socket.emit('load_backup_test', {part_key: $("#participant").val(), test_name: "eeg_story_train"});
             return false;
         })
-        $('#load_story_train_saved').click(function(event) {
+        $('#load_train_story_saved').click(function(event) {
             // Send message to call stimulus generation function in Python
             socket.emit('load_session', {part_key: $("#participant").val(), test_name: "eeg_story_train"});
             return false;

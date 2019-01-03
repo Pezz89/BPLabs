@@ -99,11 +99,10 @@
             $("#overlay").fadeOut();
         }
 
+        // Catch message when asynchronous process is complete
         socket.on('processing-complete', function(msg) {
-            // Re-enable all inputs
-            $('#main-div').find('input, textarea, button, select').removeAttr('disabled');
-            alert("/da/ stimulus processing complete!")
-            window.location.href = '/da/complete';
+            alert("Story stimulus processing complete!")
+            window.location.href = '/eeg/train/story/complete';
         });
     });
 </script>

@@ -102,8 +102,8 @@ class BaseThread(Thread):
         thread
         '''
         self.finishTest = True
-        self.wavThread._stopevent.set()
-        print(self.finishTest)
+        if self.wavThread:
+            self.wavThread._stopevent.set()
 
 
     def join(self, timeout=None):
@@ -227,6 +227,8 @@ class BaseThread(Thread):
             self.clinPageLoaded = True
         else:
             self.partPageLoaded = True
+        print("PART: {}".format(self.partPageLoaded))
+        print("CLIN: {}".format(self.clinPageLoaded))
         self.pageLoaded = self.clinPageLoaded and self.partPageLoaded
 
 

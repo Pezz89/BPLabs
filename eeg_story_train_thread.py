@@ -58,7 +58,7 @@ class EEGStoryTrainThread(BaseThread):
                                            socketio=socketio,
                                            participant=participant)
 
-        self.toSave = ['trial_ind', 'answers', 'question', 'selected_q', 'nTrials', 'wav_file', 'test_name']
+        self.toSave = ['trial_ind', 'answers', 'question', 'selected_q', 'nTrials', 'wav_files', 'test_name']
 
 
         self.socketio.on_event('submit_response', self.submitTestResponse, namespace='/main')
@@ -66,9 +66,6 @@ class EEGStoryTrainThread(BaseThread):
         self.loadStimulus()
 
         self.dev_mode = True
-
-    def loadResponse(self):
-        self.socketio.emit('test_fill_table', {'data': self.answers}, namespace='/main')
 
     def setQuestion(self, q):
         self.socketio.emit('current_question', data=q[0], namespace='/main')
@@ -78,7 +75,7 @@ class EEGStoryTrainThread(BaseThread):
         Main loop for iteratively finding the SRT
         '''
         self.waitForPageLoad()
-        self.loadResponse()
+        self.fillTable()
         self.socketio.emit('test_ready', namespace='/main')
         # For each stimulus
         trials = list(zip(self.wav_files, self.question))[self.trial_ind:]
@@ -92,7 +89,7 @@ class EEGStoryTrainThread(BaseThread):
             self.playStimulus(wav)
             self.waitForResponse()
             if self._stopevent.isSet() or self.finishTest:
-                return
+                break
             self.processResponse()
             self.trial_ind += 1
         self.saveState(out=self.backupFilepath)
@@ -116,8 +113,15 @@ class EEGStoryTrainThread(BaseThread):
         self.answers[self.trial_ind] = self.answer
         self.socketio.emit('test_resp', {'trial_ind': self.trial_ind, "ans": self.answer}, namespace='/main')
 
+    def fillTable(self):
+        '''
+        '''
+        for ind, ans in enumerate(self.answers):
+            self.socketio.emit('test_resp', {'trial_ind': ind, "ans": ans}, namespace='/main')
 
     def loadStimulus(self):
+        '''
+        '''
         self.wav_files = natsorted(globDir(self.stimDir, '*.wav'))
         q_files = natsorted(globDir(self.stimDir, '*.csv'))
         for wav_file, q_file in zip(self.wav_files, q_files):
