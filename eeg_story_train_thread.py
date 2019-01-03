@@ -44,6 +44,13 @@ class EEGStoryTrainThread(BaseThread):
         self.stimDir = stimFolder
         self.nTrials = nTrials
         self.trial_ind = 0
+
+        self.selected_q = []
+        self.question = []
+        self.answers = []
+        self.wav_files = []
+        self.q_files = []
+
         self._stopevent = Event()
 
         super(EEGStoryTrainThread, self).__init__(self.test_name,
@@ -51,14 +58,20 @@ class EEGStoryTrainThread(BaseThread):
                                            socketio=socketio,
                                            participant=participant)
 
-        self.toSave = ['trial_ind', 'nTrials', 'wav_file', 'test_name']
+        self.toSave = ['trial_ind', 'answers', 'question', 'selected_q', 'nTrials', 'wav_file', 'test_name']
 
 
+        self.socketio.on_event('submit_response', self.submitTestResponse, namespace='/main')
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
         self.loadStimulus()
 
         self.dev_mode = True
 
+    def loadResponse(self):
+        self.socketio.emit('test_fill_table', {'data': self.answers}, namespace='/main')
+
+    def setQuestion(self, q):
+        self.socketio.emit('current_question', data=q[0], namespace='/main')
 
     def testLoop(self):
         '''
@@ -71,12 +84,16 @@ class EEGStoryTrainThread(BaseThread):
         trials = list(zip(self.wav_files, self.question))[self.trial_ind:]
         for (wav, q) in trials:
             self.displayInstructions()
+            self.setQuestion(q)
             self.waitForPartReady()
             if self._stopevent.isSet() or self.finishTest:
                 break
             # Play concatenated matrix sentences at set SNR
             self.playStimulus(wav)
-            self.setMatrix(q)
+            self.waitForResponse()
+            if self._stopevent.isSet() or self.finishTest:
+                return
+            self.processResponse()
         self.saveState(out=self.backupFilepath)
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
@@ -84,18 +101,32 @@ class EEGStoryTrainThread(BaseThread):
             self.waitForPageLoad()
             self.fillTable()
 
+    def submitTestResponse(self, msg):
+        '''
+        Get and store participant response for current trial
+        '''
+        self.answer = msg
+        self.newResp = True
 
-    def fillTable(self):
+    def processResponse(self):
         '''
         '''
-        symb = [[symb_dict[x], symb_dict[y]] for x, y in self.answers if not np.isnan([x, y]).any()]
-        self.socketio.emit('test_fill_table', {'data': symb}, namespace='/main')
+        self.newResp = False
+        self.answers[self.trial_ind] = self.answer
+        self.socketio.emit('test_resp', {'trial_ind': self.trial_ind, "ans": self.answer}, namespace='/main')
 
 
-    def loadStimulus():
-        wav_files = natsorted(globDir(self.stimDir, '*.wav'))
+    def loadStimulus(self):
+        self.wav_files = natsorted(globDir(self.stimDir, '*.wav'))
         q_files = natsorted(globDir(self.stimDir, '*.csv'))
-        set_trace()
+        for wav_file, q_file in zip(self.wav_files, q_files):
+            q_lines = []
+            with open(q_file, 'r') as csvfile:
+                reader = csv.reader(csvfile)
+                for line in reader:
+                    q_lines.append((int(line[0]), line[1:]))
+            q_ind = randint(0, len(q_lines)-1)
+            self.question.append(q_lines[q_ind][1])
 
 
     def displayInstructions(self):
@@ -115,14 +146,6 @@ class EEGStoryTrainThread(BaseThread):
             self.play_wav('./test.wav', 'finish_test')
 
         self.socketio.emit("stim_done", namespace="/main")
-
-
-    def loadStimulus(self):
-        '''
-        '''
-        #audio, fs, enc, fmt = sndio.read(wav, return_format=True)
-        self.answers = np.empty(np.shape(self.question)[:2])
-        self.answers[:] = np.nan
 
 
     def saveState(self, out="test_state.pkl"):

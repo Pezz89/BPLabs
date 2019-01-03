@@ -20,14 +20,46 @@
             <tbody>
                 <tr id="Q1">
                     <th scope="row">Q</th>
-                    <td class="T1">-</td>
-                    <td class="T2">-</td>
-                    <td class="T3">-</td>
-                    <td class="T4">-</td>
-                    <td class="T5">-</td>
-                    <td class="T6">-</td>
-                    <td class="T7">-</td>
-                    <td class="T8">-</td>
+                    <td class="T1">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T2">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T3">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T4">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T5">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T6">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T7">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                            Ans
+                        </button>
+                    </td>
+                    <td class="T8">
+                        <button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="bottom" title="--">
+                            Ans
+                        </button>
+                    </td>
                 </tr>
             </tbody>
         </table>
@@ -39,6 +71,9 @@
 </div>
 <script>
     $(document).ready(function(){
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip()
+        })
         // Initialise socketio with a namespace called "main"
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
         // Check if matrix stimulus is currently being processed
@@ -50,7 +85,7 @@
 
         socket.on('test_fill_table', function(msg) {
             for(i = 0; i < msg['data'].length; i++) {
-                $(`#Q1 > .T${i+1}`).text(String.fromCharCode(msg['data'][i][j]));
+                $(`#Q1 > .T${i+1} > button`).attr("title", msg['data'][i]);
             }
         });
 

@@ -56,7 +56,7 @@ class DaTestThread(BaseThread):
 
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
 
-        self.dev_mode = True
+        self.dev_mode = False
 
 
     def testLoop(self):

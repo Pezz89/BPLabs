@@ -19,8 +19,16 @@
         </div>
     </div>
     <div id="question_overlay">
-        <p id=question></p>
-        <button type="button" href="#" id="q_submit" class="Btn Btn-primary">Submit</button>
+        <div class="card">
+            <div class="card-body">
+                <p id=question></p>
+                <div class="form-group">
+                    <label for="answer">Answer:</label>
+                    <textarea class="form-control" rows="5" id="answer"></textarea>
+                </div> 
+                <button type="button" href="#" id="submit_response" class="Btn Btn-primary">Submit</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -50,6 +58,10 @@
             }
         }
 
+        $('#submit_response').click(function(event) {
+            var text = $('#answer').val();
+            socket.emit("submit_response", data=text);
+        });
 
         $('#instr_continue').click(function(event) {
             hideInstructions();
