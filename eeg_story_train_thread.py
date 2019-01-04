@@ -68,7 +68,8 @@ class EEGStoryTrainThread(BaseThread):
         self.dev_mode = True
 
     def setQuestion(self, q):
-        self.socketio.emit('current_question', data=q[0], namespace='/main')
+        self.socketio.emit('set_question', data=q[0], namespace='/main')
+        set_trace()
 
     def testLoop(self):
         '''

@@ -21,7 +21,7 @@
     <div id="question_overlay">
         <div class="card">
             <div class="card-body">
-                <p id=question></p>
+                <p id="question"></p>
                 <div class="form-group">
                     <label for="answer">Answer:</label>
                     <textarea class="form-control" rows="5" id="answer"></textarea>
@@ -74,6 +74,9 @@
             displayInstructions();
         });
 
+        socket.on('set_question', function(msg) {
+            $('#question').text("Question: " + msg);
+        });
 
         socket.on('test_ready', function(msg) {
             loading = false;
