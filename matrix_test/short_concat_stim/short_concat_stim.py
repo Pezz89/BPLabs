@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import sys
+sys.path.insert(0, "../helper_modules/")
+
 import os
 from filesystem import globDir
 import argparse
@@ -43,9 +46,18 @@ def gen_trigger(idx, freq, length, fs):
     return trigger
 
 def main():
-    base_dir = "./stimulus/wav/sentence-lists/"
-    out_dir = "./short_concat_stim/"
-    noise_filepath = "./stimulus/wav/noise/noise.wav"
+    stim_dir = "../behavioural_stim/stimulus"
+    wav_dir = "../behavioural_stim/stimulus/wav"
+    base_dir = "../behavioural_stim/stimulus/wav/sentence-lists/"
+    noise_dir = "../behavioural_stim/stimulus/wav/noise/"
+    out_dir = "./out"
+    dir_must_exist(base_dir)
+    dir_must_exist(out_dir)
+    dir_must_exist(wav_dir)
+    dir_must_exist(noise_dir)
+
+    noise_filepath = "../behavioural_stim/stimulus/wav/noise/noise.wav"
+
     folders = os.listdir(base_dir)
     folders = natsorted(folders)[1:15]
     folders = list(zip(folders[::2], folders[1::2]))

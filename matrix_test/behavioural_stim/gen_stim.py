@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import sys
+sys.path.insert(0, "../helper_modules/")
 
 import argparse
 import os
@@ -128,12 +130,12 @@ if __name__ == "__main__":
                                      'training TRF decoder by concatenating '
                                      'matrix test materials')
     parser.add_argument('--MatrixDir', type=PathType(exists=True, type='dir'),
-                        default='./speech_components',
+                        default='../speech_components',
                         help='Matrix test speech data location')
     parser.add_argument('--OutDir', type=PathType(exists=None, type='dir'),
                         default='./stimulus', help='Output directory')
     parser.add_argument('--ListDir', type=PathType(exists=None, type='dir'),
-                        default='./lists', help='Output directory')
+                        default='../lists', help='Output directory')
 
     args = {k:v for k,v in vars(parser.parse_args()).items() if v is not None}
 

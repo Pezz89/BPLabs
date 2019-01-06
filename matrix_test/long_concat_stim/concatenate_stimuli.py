@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import sys
+sys.path.insert(0, "../helper_modules/")
 
 import argparse
 import os
@@ -51,34 +53,44 @@ def globDir(directory, pattern):
             filepaths.append(item)
     return filepaths
 
-def concatenateStimuli(MatrixDir, OutDir, Length):
+def concatenateStimuli(MatrixDir, OutDir, Length, n):
     # Get matrix wav file paths
     wavFiles = globDir(MatrixDir, '*.wav')
     wavFiles = natsorted(wavFiles)
     totalSize = 0
+    y = []
+    i = 0
     for wav in wavFiles:
+        if i == n:
+            break
         wavObj = PySndfile(wav)
         fs = wavObj.samplerate()
         size = wavObj.frames()
         totalSize += size
         totalSize += int(0.1*fs)
         if (totalSize/fs) > Length:
-            break
-    y = np.zeros(totalSize)
+            y.append(np.zeros(totalSize))
+            i += 1
+            totalSize = 0
 
     writePtr = 0
+    i = 0
     for wav in wavFiles:
-        if writePtr >= y.size:
+        if writePtr >= y[i].size:
+            i += 1
+            writePtr = 0
+        if i == n:
             break
         x, fs, encStr, fmtStr = sndio.read(wav, return_format=True)
         threeMs = int(0.1*fs)
         silence = np.zeros(threeMs)
         chunk = np.append(x, silence)
-        y[writePtr:writePtr + chunk.size] = chunk
+        y[i][writePtr:writePtr + chunk.size] = chunk
 
         writePtr += chunk.size
 
-    pysndfile.sndio.write(os.path.join(OutDir, 'decoder_stim.wav'), y, format=fmtStr, enc=encStr)
+    for ind, data in enumerate(y):
+        pysndfile.sndio.write(os.path.join(OutDir, 'stim_{}.wav'.format(ind)), data, format=fmtStr, enc=encStr)
 
 if __name__ == "__main__":
     # Create commandline interface
@@ -86,12 +98,14 @@ if __name__ == "__main__":
                                      'training TRF decoder by concatenating '
                                      'matrix test materials')
     parser.add_argument('--MatrixDir', type=PathType(exists=True, type='dir'),
-                        default='./speech_components',
+                        default='./out/parts',
                         help='Matrix test speech data location')
     parser.add_argument('--OutDir', type=PathType(exists=None, type='dir'),
-                        default='./out_concat', help='Output directory')
-    parser.add_argument('--Length', type=int, default=60,
-                        help='Concatenated length of trials in seconds')
+                        default='./out/stim', help='Output directory')
+    parser.add_argument('--Length', type=int, default=900,
+                        help='Length of each concatenated trial in seconds')
+    parser.add_argument('-n', type=int, default=4,
+                        help='Number of trials to generate')
     args = {k:v for k,v in vars(parser.parse_args()).items() if v is not None}
 
     # Generate output directory if it doesn't exist

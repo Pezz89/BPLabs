@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import sys
+sys.path.insert(0, "../helper_modules")
 
 import argparse
 import os
@@ -193,12 +195,12 @@ def gen_noise(OutDir, b, fs, s_rms):
     x = np.random.randn(int(fs*60.*10.))
     x /= x.max()
     noiseDir = os.path.join(OutDir, 'wav')
-    noiseDir = os.path.join(OutDir, 'rms')
+    noiseRMSDir = os.path.join(OutDir, 'rms')
     dir_must_exist(noiseDir)
     noiseDir = os.path.join(noiseDir, 'noise')
     dir_must_exist(noiseDir)
     y = block_lfilter_wav(b, [1.0], x, os.path.join(noiseDir, 'noise.wav'), 65538, 44100)
-    noise_rms_path = os.path.join(noiseDir, 'noise_rms.npy')
+    noise_rms_path = os.path.join(noiseRMSDir, 'noise_rms.npy')
     rms = np.sqrt(np.mean(y**2))
     np.save(noise_rms_path, rms)
     return y
@@ -233,7 +235,7 @@ if __name__ == "__main__":
                                      'training TRF decoder by concatenating '
                                      'matrix test materials')
     parser.add_argument('--MatrixDir', type=PathType(exists=True, type='dir'),
-                        default='./speech_components',
+                        default='../speech_components',
                         help='Matrix test speech data location')
     parser.add_argument('--OutDir', type=PathType(exists=None, type='dir'),
                         default='./stimulus', help='Output directory')

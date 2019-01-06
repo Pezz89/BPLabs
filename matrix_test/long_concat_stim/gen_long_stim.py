@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import sys
+sys.path.insert(0, "../helper_modules/")
 
 import argparse
 import os
@@ -70,7 +72,6 @@ def generateTrialInds(n=1):
     Indexes are generated randomly without replacement, ensuring no duplicate
     identical samples are generated
     '''
-    pdb.set_trace()
     choice = np.random.choice(100000, n, replace=False)
     indexes = np.zeros((n, 5), dtype=int)
     for ind, c in enumerate(choice):
@@ -86,8 +87,6 @@ def gen2(MatrixDir, OutDir, indexes):
         for ind in sentenceList:
             y, wavInfo, partnames = synthesizeTrial(wavFileMatrix, ind)
 
-    files.append(fileName)
-    pdb.set_trace()
 
 
 
@@ -279,13 +278,14 @@ if __name__ == "__main__":
                                      'training TRF decoder by concatenating '
                                      'matrix test materials')
     parser.add_argument('--MatrixDir', type=PathType(exists=True, type='dir'),
-                        default='./speech_components',
+                        default='../speech_components',
                         help='Matrix test speech data location')
     parser.add_argument('--OutDir', type=PathType(exists=None, type='dir'),
-                        default='./out_trials', help='Output directory')
-    parser.add_argument('--Length', type=int, default=60,
+                        default='./out', help='Output directory')
+    parser.add_argument('--Length', type=int, default=3600,
                         help='Concatenated length of trials in seconds')
     args = {k:v for k,v in vars(parser.parse_args()).items() if v is not None}
+    dir_must_exist(args['OutDir'])
 
     # Check directory for storing generated noise exists
     #noiseDir = os.path.join(args['OutDir'], 'noise')
@@ -297,32 +297,37 @@ if __name__ == "__main__":
     #if os.path.exists(args['OutDir']):
     #    shutil.rmtree(args['OutDir'])
     #    os.makedirs(args['OutDir'])
-    ## Generate output directory if it doesn't exist
-    #prepareOutDir(args['OutDir'])
+
+    # Generate output directory if it doesn't exist
+    outDir = args.pop("OutDir")
+    prepareOutDir(outDir)
+    partsDir = os.path.join(outDir, 'parts')
+    dir_must_exist(partsDir)
 
 
     # Generate audio stimulus from arguments provided on command line
 
     # Randomly generate word choices for each trial
-    # indexes = generateTrialInds(100000)
-
     x = np.repeat(np.arange(10), 5)
     x = x.reshape(10, 5)
 
     y = np.zeros((50, 10, 5), dtype=int)
 
-    # 50 lists
-    for i in range(50):
-        x[:, 1] = np.roll(x[:, 1], 1)
-        x[:, 2] = np.roll(x[:, 2], 2)
-        x[:, 3] = np.roll(x[:, 3], 3)
-        x[:, 4] = np.roll(x[:, 4], 4)
-        y[i] = x.copy()
-    #indexes =
-    gen2(args['MatrixDir'], args['OutDir'], y)
-    generateAudioStimulus(**args)
+    # # 50 lists
+    # for i in range(50):
+    #     x[:, 1] = np.roll(x[:, 1], 1)
+    #     x[:, 2] = np.roll(x[:, 2], 2)
+    #     x[:, 3] = np.roll(x[:, 3], 3)
+    #     x[:, 4] = np.roll(x[:, 4], 4)
+    #     y[i] = x.copy()
+    # #indexes =
+    # #gen2(args['MatrixDir'], args['OutDir'], y)
+    # y = y.reshape(500, 5)
+    # y = np.vstack((y, y, y, y))
+    indexes = generateTrialInds(100000)
+    generateAudioStimulus(**args, OutDir=partsDir, indexes=indexes)
 
-    generateNoiseFromSentences(args['OutDir'], noiseDir)
+    #generateNoiseFromSentences(args['OutDir'], noiseDir)
     #generateDecoderAudio(args['OutDir'], noiseDir, decoderDir)
 
 
