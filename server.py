@@ -27,7 +27,7 @@ from pysndfile import sndio
 from scipy.optimize import minimize
 
 from app import generate_matrix_stimulus
-from matrix_test.filesystem import globDir, organiseWavs, prepareOutDir
+from matrix_test.helper_modules.filesystem import globDir, organiseWavs, prepareOutDir
 from matrix_test_thread import MatTestThread
 from pathops import dir_must_exist
 from participant import Participant

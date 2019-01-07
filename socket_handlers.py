@@ -23,11 +23,11 @@ from scipy.optimize import minimize
 from WavPlayer import play_wav_async
 
 from app import generate_matrix_stimulus
-from matrix_test.filesystem import globDir, organiseWavs, prepareOutDir
+from matrix_test.helper_modules.filesystem import globDir, organiseWavs, prepareOutDir
 from matrix_test_thread import MatTestThread
 from pathops import dir_must_exist
 from participant import Participant
-from matrix_test.signalops import play_wav
+from matrix_test.helper_modules.signalops import play_wav
 
 from config import server, socketio, participants
 
@@ -126,13 +126,13 @@ def start_test(msg):
     test_name = msg.pop('test_name')
     part_key = msg.pop('part_key')
     thread_type = thread_types[test_name]
-    socketio.emit('participant_start_{}'.format(test_name), namespace='/main')
 
     if part_key != "--":
         participant = participants[part_key]
     else:
         raise ValueError("Participant must be selected...")
 
+    socketio.emit('participant_start_{}'.format(test_name), namespace='/main')
     socketio.emit('participant_start', test_name, namespace='/main', broadcast=True)
     run_test_thread(test_name, thread_type, participant=participant, **msg)
 

@@ -1,6 +1,6 @@
 import pathops
 import os
-from matrix_test.generate_matrix_stimulus import generateAudioStimulus
+from matrix_test.long_concat_stim.gen_long_stim import generateAudioStimulus
 import time
 
 import config

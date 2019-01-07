@@ -11,7 +11,7 @@ import csv
 from shutil import copy2
 
 from pysndfile import sndio, PySndfile
-from matrix_test.filesystem import globDir
+from matrix_test.helper_modules.filesystem import globDir
 from test_base import BaseThread
 import sounddevice as sd
 import pdb

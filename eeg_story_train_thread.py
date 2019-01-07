@@ -1,7 +1,6 @@
 from threading import Thread, Event
 import os
 import numpy as np
-from matrix_test.filesystem import globDir
 from pysndfile import PySndfile, sndio
 from random import randint, shuffle
 from shutil import copyfile
@@ -12,7 +11,8 @@ from shutil import copy2
 
 from test_base import BaseThread
 
-from matrix_test.signalops import play_wav
+from matrix_test.helper_modules.signalops import play_wav
+from matrix_test.helper_modules.filesystem import globDir
 from scipy.special import logit
 from config import socketio
 import csv
@@ -65,11 +65,10 @@ class EEGStoryTrainThread(BaseThread):
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
         self.loadStimulus()
 
-        self.dev_mode = True
+        self.dev_mode = False
 
     def setQuestion(self, q):
         self.socketio.emit('set_question', data=q[0], namespace='/main')
-        set_trace()
 
     def testLoop(self):
         '''

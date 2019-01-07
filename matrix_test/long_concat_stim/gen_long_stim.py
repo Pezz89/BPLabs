@@ -22,7 +22,7 @@ from pathops import dir_must_exist
 try:
     from signalops import rolling_window_lastaxis, block_lfilter
 except ImportError:
-    from .signalops import rolling_window_lastaxis, block_lfilter
+    from ..helper_modules.signalops import rolling_window_lastaxis, block_lfilter
 
 import scipy.signal as sgnl
 from scipy.stats import pearsonr
@@ -32,12 +32,12 @@ from pyswarm import pso
 try:
     from lpc import lpc
 except ImportError:
-    from .lpc import lpc
+    from ..helper_modules.lpc import lpc
 
 try:
     from filesystem import globDir, organiseWavs, prepareOutDir
 except ImportError:
-    from .filesystem import globDir, organiseWavs, prepareOutDir
+    from ..helper_modules.filesystem import globDir, organiseWavs, prepareOutDir
 
 
 def synthesizeTrial(wavFileMatrix, indexes):

@@ -1,7 +1,7 @@
 from threading import Thread, Event
 import os
 import numpy as np
-from matrix_test.filesystem import globDir
+from matrix_test.helper_modules.filesystem import globDir
 from pysndfile import PySndfile, sndio
 from random import randint, shuffle
 from shutil import copyfile
@@ -12,7 +12,7 @@ from shutil import copy2
 
 from test_base import BaseThread
 
-from matrix_test.signalops import play_wav
+from matrix_test.helper_modules.signalops import play_wav
 from scipy.special import logit
 from config import socketio
 import csv

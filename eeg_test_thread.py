@@ -1,7 +1,7 @@
 from threading import Thread, Event
 import os
 import numpy as np
-from matrix_test.filesystem import globDir
+from matrix_test.helper_modules.filesystem import globDir
 from pysndfile import PySndfile, sndio
 from random import randint, shuffle
 from shutil import copyfile
@@ -47,7 +47,7 @@ class EEGTestThread(BaseThread):
     Thread for running server side matrix test operations
     '''
     def __init__(self, sessionFilepath=None,
-                 listFolder="./matrix_test/short_concat_stim/",
+                 listFolder="./matrix_test/short_concat_stim/out",
                  noiseFilepath="./matrix_test/stimulus/wav/noise/noise.wav",
                  socketio=None, participant=None, srt_50=None, s_50=None):
         self.noise_path = noiseFilepath
