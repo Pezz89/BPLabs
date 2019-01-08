@@ -98,11 +98,11 @@ class EEGMatTrainThread(BaseThread):
 
         # Calculate SNRs based on behavioural measures
         s_50 *= 0.01
+        shuffle(self.si)
         x = logit(self.si * 0.01)
         snrs = (x/(4*s_50))+srt_50
         self.snr_fs = 10**(-snrs/20)
         self.snr_fs[self.snr_fs == np.inf] = 0.
-        shuffle(self.snr_fs)
         if (self.snr_fs == -np.inf).any():
             raise ValueError("Noise infinitely louder than signal for an SNR (SNRs: {})".format(self.snr_fs))
 
@@ -116,15 +116,20 @@ class EEGMatTrainThread(BaseThread):
         # directory
         self.data_path = self.participant.data_paths[self.test_name]
         out_dir = os.path.join(self.data_path, "stimulus")
+        out_info = os.path.join(out_dir, "stim_info.csv")
         dir_must_exist(out_dir)
 
-        for wav, snr, rms in zip(wavs, self.snr_fs, rms_files):
-            out_wavpath =  os.path.join(out_dir, os.path.basename(wav))
-            stim_rms = np.load(rms)
-            match_ratio = stim_rms/self.noise_rms
-            set_trace()
-            block_mix_wavs(wav, self.noise_path, out_wavpath, 1.*self.reduction_coef, snr*match_ratio*self.reduction_coef)
-            self.stim_paths.append(out_wavpath)
+        with open(out_info, 'w') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['wav', 'snr_fs', 'rms', 'si', 'snr'])
+            for wav, snr_fs, rms, si, snr in zip(wavs, self.snr_fs, rms_files, self.si, snrs):
+                out_wavpath =  os.path.join(out_dir, os.path.basename(wav))
+                stim_rms = np.load(rms)
+                match_ratio = stim_rms/self.noise_rms
+                block_mix_wavs(wav, self.noise_path, out_wavpath, 1.*self.reduction_coef, snr_fs*match_ratio*self.reduction_coef)
+                self.stim_paths.append(out_wavpath)
+                writer.writerow([wav, snr_fs, rms, si, snr])
+                # TODO: Output SI/snrs of each file to a CSV file
 
 
 
