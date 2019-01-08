@@ -61,10 +61,10 @@ class MatTestThread(BaseThread):
     Thread for running server side matrix test operations
     '''
     def __init__(self, listN=3, sessionFilepath=None,
-                 noiseFilepath="./matrix_test/stimulus/wav/noise/noise.wav",
-                 noiseRMSFilepath="./matrix_test/stimulus/rms/noise/noise_rms.npy",
-                 listFolder="./matrix_test/stimulus/wav/sentence-lists/",
-                 red_coef="./matrix_test/short_concat_stim/reduction_coef.npy",
+                 noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
+                 noiseRMSFilepath="./matrix_test/behavioural_stim/stimulus/rms/noise_rms.npy",
+                 listFolder="./matrix_test/behavioural_stim/stimulus/wav/sentence-lists/",
+                 red_coef="./matrix_test/short_concat_stim/out/reduction_coef.npy",
                  socketio=None, participant=None):
 
         self.listDir = listFolder
@@ -140,6 +140,7 @@ class MatTestThread(BaseThread):
             self.y = self.generateTrial(self.snr)
             self.playStimulus(self.y, self.fs)
             self.waitForResponse()
+            self.checkSentencesAvailable()
             if self.finishTest:
                 break
             if self._stopevent.isSet():
@@ -222,6 +223,7 @@ class MatTestThread(BaseThread):
         sortedPC = percent_correct[sortedSNRind]
         x = np.linspace(np.min(sortedSNR)-5, np.max(sortedSNR)+3, 3000)
         srt_50, s_50 = res.x
+        set_trace()
         x_y = self.logisticFunction(x, srt_50, s_50)
         x_y *= 100.
         # np.savez('./plot.npz', x, x_y*100., sortedSNR, sortedPC)
@@ -291,6 +293,20 @@ class MatTestThread(BaseThread):
         plot_url = "data:image/png;base64,{}".format(plot_url)
         self.socketio.emit("mat_plot_ready", {'data': plot_url}, namespace="/main")
 
+    def checkSentencesAvailable(self):
+        correct = np.array([x == y for x, y in zip(self.currentWords, self.response)])
+        # If all sentences in the current list have been presented...
+        if not self.availableSentenceInds:
+            # Set subsequent list as the current list
+            del self.lists[0]
+            del self.listsRMS[0]
+            del self.listsString[0]
+            if not len(self.lists):
+                self.finishTest = True
+                self.wordsCorrect[self.trialN-1] = correct
+                return None
+            self.availableSentenceInds = list(range(len(self.lists[0])))
+            random.shuffle(self.availableSentenceInds)
 
     def calcSNR(self):
         '''
@@ -312,19 +328,7 @@ class MatTestThread(BaseThread):
                 if self.direction != 0:
                     self.i += 1
                 self.direction = currentDirection
-
-        # If all sentences in the current list have been presented...
-        if not self.availableSentenceInds:
-            # Set subsequent list as the current list
-            del self.lists[0]
-            del self.listsRMS[0]
-            del self.listsString[0]
-            if not len(self.lists):
-                self.finishTest = True
-                self.wordsCorrect[self.trialN-1] = correct
-                return None
-            self.availableSentenceInds = list(range(len(self.lists[0])))
-            random.shuffle(self.availableSentenceInds)
+        self.checkSentencesAvailable()
         self.snrTrack[self.trialN] = self.snr
         self.wordsCorrect[self.trialN-1] = correct
         self.trialN += 1

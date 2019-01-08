@@ -192,7 +192,7 @@ def calc_spectrum(files, silences, fs=44100, plot=False):
 def gen_noise(OutDir, b, fs, s_rms):
     print("Generating noise...")
     # Generate 10 minutes of white noise
-    x = np.random.randn(int(fs*60.*10.))
+    x = np.random.randn(int(fs*60.*20.))
     x /= x.max()
     noiseDir = os.path.join(OutDir, 'wav')
     noiseRMSDir = os.path.join(OutDir, 'rms')

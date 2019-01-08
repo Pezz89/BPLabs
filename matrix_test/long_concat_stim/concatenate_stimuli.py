@@ -3,6 +3,7 @@
 import sys
 sys.path.insert(0, "../helper_modules/")
 
+import csv
 import argparse
 import os
 import shutil
@@ -17,6 +18,7 @@ import pysndfile
 from pysndfile import sndio, PySndfile
 
 from pathtype import PathType
+from tokens_to_words import tokens_to_words, load_component_map
 
 def prepareOutDir(folder):
     '''
@@ -51,14 +53,25 @@ def globDir(directory, pattern):
     for item in absoluteFilePaths(directory):
         if bool(speech_file_pattern.match(os.path.basename(item))):
             filepaths.append(item)
-    return filepaths
+    return natsorted(filepaths)
 
 def concatenateStimuli(MatrixDir, OutDir, Length, n):
     # Get matrix wav file paths
     wavFiles = globDir(MatrixDir, '*.wav')
+
+    stim_parts = os.path.join(MatrixDir, "stim_parts.csv")
+    stim_words = os.path.join(MatrixDir, "stim_words.csv")
+    stim_part_rows = []
+    with open(stim_parts, 'r') as csvfile:
+        stim_part_rows = [line for line in csv.reader(csvfile)]
+    with open(stim_words, 'r') as csvfile:
+        stim_word_rows = [line for line in csv.reader(csvfile)]
+
     wavFiles = natsorted(wavFiles)
     totalSize = 0
     y = []
+    parts = []
+    questions = []
     i = 0
     for wav in wavFiles:
         if i == n:
@@ -70,12 +83,14 @@ def concatenateStimuli(MatrixDir, OutDir, Length, n):
         totalSize += int(0.1*fs)
         if (totalSize/fs) > Length:
             y.append(np.zeros(totalSize))
+            parts.append([])
+            questions.append([])
             i += 1
             totalSize = 0
 
     writePtr = 0
     i = 0
-    for wav in wavFiles:
+    for wav, word, part in zip(wavFiles, stim_word_rows, stim_part_rows):
         if writePtr >= y[i].size:
             i += 1
             writePtr = 0
@@ -86,11 +101,19 @@ def concatenateStimuli(MatrixDir, OutDir, Length, n):
         silence = np.zeros(threeMs)
         chunk = np.append(x, silence)
         y[i][writePtr:writePtr + chunk.size] = chunk
+        questions[i].append(word)
+        parts[i].append(part)
 
         writePtr += chunk.size
 
-    for ind, data in enumerate(y):
+    for ind, (data, q, p) in enumerate(zip(y, questions, parts)):
         pysndfile.sndio.write(os.path.join(OutDir, 'stim_{}.wav'.format(ind)), data, format=fmtStr, enc=encStr)
+        with open('./out/stim/stim_words_{}.csv'.format(ind), 'w') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerows(q)
+        with open('./out/stim/stim_parts_{}.csv'.format(ind), 'w') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerows(p)
 
 if __name__ == "__main__":
     # Create commandline interface

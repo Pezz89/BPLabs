@@ -2,6 +2,8 @@ from threading import Thread, Event
 import os
 import numpy as np
 from matrix_test.helper_modules.filesystem import globDir
+from pathops import dir_must_exist
+from matrix_test.helper_modules.signalops import block_mix_wavs
 from pysndfile import PySndfile, sndio
 from random import randint, shuffle
 from shutil import copyfile
@@ -47,11 +49,16 @@ class EEGMatTrainThread(BaseThread):
     Thread for running server side matrix test operations
     '''
     def __init__(self, sessionFilepath=None,
-                 listFolder="./matrix_test/short_concat_stim/out",
+                 stimFolder="./matrix_test/long_concat_stim/out/stim",
                  noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
+                 noiseRMSFilepath="./matrix_test/behavioural_stim/stimulus/rms/noise_rms.npy",
                  socketio=None, participant=None, srt_50=None, s_50=None):
         self.noise_path = noiseFilepath
-        self.listDir = listFolder
+        self.noise_rms = np.load(noiseRMSFilepath)
+        self.stim_folder = stimFolder
+        self.stim_paths = []
+
+
 
         self.wav_files = []
         self.marker_files = []
@@ -61,7 +68,7 @@ class EEGMatTrainThread(BaseThread):
 
         # Percent speech inteligibility (estimated using behavioural measure)
         # to present stimuli at
-        self.si = np.array([20.0, 35.0, 50.0, 65.0, 80.0, 90.0, 100.0])
+        self.si = np.array([20.0, 50.0, 90.0, 100.0])
         self.trial_ind = 0
         self._stopevent = Event()
 
@@ -84,91 +91,40 @@ class EEGMatTrainThread(BaseThread):
             raise KeyError("Behavioural matrix test results not available, make "
                            "sure the behavioural test has been run before "
                            "running this test.")
-        # Estimate speech intelligibility thresholds using predicted
-        # psychometric function
-        reduction_coef = float(np.load(os.path.join(self.listDir, 'reduction_coef.npy')))
+
+        #reduction_coef = float(np.load(os.path.join(self.listDir, 'reduction_coef.npy')))
+
+        # Calculate SNRs based on behavioural measures
         s_50 *= 0.01
         x = logit(self.si * 0.01)
         snrs = (x/(4*s_50))+srt_50
-        snr_map = pd.DataFrame({"speech_intel" : self.si, "snr": snrs})
-        save_dir = self.participant.data_paths['eeg_test/stimulus']
-        snr_map_path = os.path.join(save_dir, "snr_map.csv")
-        snr_map.to_csv(snr_map_path)
-        snrs = np.repeat(snrs[np.newaxis], 4, axis=0)
-        snrs = roll_independant(snrs, np.array([0,-1,-2,-3]))
-        noise_file = PySndfile(self.noise_path, 'r')
-        stim_dirs = [x for x in os.listdir(self.listDir) if os.path.isdir(os.path.join(self.listDir, x))]
-        shuffle(stim_dirs)
-        wav_files = []
-        question = []
-        marker_files = []
+        self.snr_fs = 10**(-snrs/20)
+        self.snr_fs[self.snr_fs == np.inf] = 0.
+        shuffle(self.snr_fs)
+        if (self.snr_fs == -np.inf).any():
+            raise ValueError("Noise infinitely louder than signal for an SNR (SNRs: {})".format(self.snr_fs))
+
+
+        wavs = globDir(self.stim_folder, "*.wav")
+        questions = globDir(self.stim_folder, "stim_questions_*.csv")
+        rms_files = globDir(self.stim_folder, "stim_*_rms.npy")
+
         self.socketio.emit('test_stim_load', namespace='/main')
-        for ind, dir_name in enumerate(stim_dirs):
-            stim_dir = os.path.join(self.listDir, dir_name)
-            wav = globDir(stim_dir, "*.wav")[0]
-            csv_files = natsorted(globDir(stim_dir, "*.csv"))
-            marker_file = csv_files[0]
-            question_files = csv_files[1:]
-            rms_file = globDir(stim_dir, "*.npy")[0]
-            speech_rms = float(np.load(rms_file))
-            snr = snrs[:, ind]
-            audio, fs, enc, fmt = sndio.read(wav, return_format=True)
+        # Add noise to audio files at set SNRs and write to participant
+        # directory
+        self.data_path = self.participant.data_paths[self.test_name]
+        out_dir = os.path.join(self.data_path, "stimulus")
+        dir_must_exist(out_dir)
 
-            speech = audio[:, :2]
-            #triggers = audio[:, 2]
-            wf = []
-            for ind2, s in enumerate(snr):
-                start = randint(0, noise_file.frames()-speech.shape[0])
-                noise_file.seek(start)
-                noise = noise_file.read_frames(speech.shape[0])
-                noise_rms = np.sqrt(np.mean(noise**2))
-                snr_fs = 10**(-s/20)
-                if snr_fs == np.inf:
-                    snr_fs = 0.
-                elif snr_fs == -np.inf:
-                    raise ValueError("Noise infinitely louder than signal at snr: {}".format(snr))
-                noise = noise*(speech_rms/noise_rms)
-                out_wav_path = os.path.join(save_dir, "Stim_{0}_{1}.wav".format(ind, ind2))
-                out_meta_path = os.path.join(save_dir, "Stim_{0}_{1}.npy".format(ind, ind2))
-                with np.errstate(divide='raise'):
-                    try:
-                        out_wav = (speech+(np.stack([noise, noise], axis=1)*snr_fs))*reduction_coef
-                    except:
-                        set_trace()
-                #out_wav = np.concatenate([out_wav, triggers[:, np.newaxis]], axis=1)
-                sndio.write(out_wav_path, out_wav, fs, fmt, enc)
-                np.save(out_meta_path, snr)
-                wf.append(out_wav_path)
-            wav_files.append(wf)
-            out_marker_path = os.path.join(save_dir, "Marker_{0}.csv".format(ind))
-            marker_files.append(out_marker_path)
-            copyfile(marker_file, out_marker_path)
-            for q_file in question_files:
-                out_q_path = os.path.join(save_dir, "Questions_{0}_{1}.csv".format(ind, ind2))
-                self.question_files.append(out_q_path)
-                copyfile(q_file, out_q_path)
+        for wav, snr, rms in zip(wavs, self.snr_fs, rms_files):
+            out_wavpath =  os.path.join(out_dir, os.path.basename(wav))
+            stim_rms = np.load(rms)
+            match_ratio = stim_rms/self.noise_rms
+            set_trace()
+            # TODO: Match RMS of signals first
+            block_mix_wavs(wav, self.noise_path, out_wavpath, 1., snr*match_ratio)
+            self.stim_paths.append(out_wavpath)
 
-            for q_file_path in question_files:
-                q = []
-                with open(q_file_path, 'r') as q_file:
-                    q_reader = csv.reader(q_file)
-                    for line in q_reader:
-                        q.append(line)
-                question.append(q)
-
-        self.wav_files = [item for sublist in wav_files for item in sublist]
-
-        self.question.extend(question)
-
-        for item in marker_files:
-            self.marker_files.extend([item] * 4)
-
-        c = list(zip(self.wav_files, self.marker_files, self.question))
-        shuffle(c)
-        self.wav_files, self.marker_files, self.question = zip(*c)
-
-        self.answers = np.empty(np.shape(self.question)[:2])
-        self.answers[:] = np.nan
 
 
     def testLoop(self):
@@ -247,6 +203,7 @@ class EEGMatTrainThread(BaseThread):
         saveDict = {k:self.__dict__[k] for k in toSave}
         self.participant['eeg_test'].update(saveDict)
         self.participant.save("eeg_test")
+
         backup_path = os.path.join(self.participant.data_paths['eeg_test'],
                         'finalised_backup.pkl')
         copy2(self.backupFilepath, backup_path)

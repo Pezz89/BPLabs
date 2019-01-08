@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import queue
 import sys
 import threading
+from pysndfile import PySndfile, construct_format
 
 import sounddevice as sd
 import soundfile as sf
@@ -82,6 +83,26 @@ def block_lfilter(b, a, x, blocksize=8192):
         i += blocksize
     return out
 
+def block_mix_wavs(wavpath_a, wavpath_b, out_wavpath, a_gain=1., b_gain=1., block_size=4096):
+    '''
+    Mix two wav files, applying gains to each
+    '''
+    wav_a = PySndfile(wavpath_a, 'r')
+    wav_b = PySndfile(wavpath_b, 'r')
+
+    out_wav = PySndfile(out_wavpath, 'w', construct_format('wav', 'pcm16'), wav_a.channels(), wav_a.samplerate())
+
+    i = 0
+    while i < wav_a.frames():
+        if i+block_size > wav_a.frames():
+            block_size = wav_a.frames()-i
+        x1 = wav_a.read_frames(block_size)
+        x2 = wav_b.read_frames(block_size)
+        x1 *= a_gain
+        x2 *= b_gain
+        out_wav.write_frames(x1 + x2)
+        i += block_size
+
 
 
 def calc_rms(y, window, plot=False):
@@ -95,4 +116,4 @@ def calc_rms(y, window, plot=False):
         plt.plot(y)
         plt.plot(rms)
         plt.show()
-    return rms
+    return rms[:-round(window/2.)]
