@@ -52,12 +52,14 @@ class EEGMatTrainThread(BaseThread):
                  stimFolder="./matrix_test/long_concat_stim/out/stim",
                  noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
                  noiseRMSFilepath="./matrix_test/behavioural_stim/stimulus/rms/noise_rms.npy",
+                 red_coef="./matrix_test/short_concat_stim/out/reduction_coef.npy",
                  socketio=None, participant=None, srt_50=None, s_50=None):
         self.noise_path = noiseFilepath
         self.noise_rms = np.load(noiseRMSFilepath)
         self.stim_folder = stimFolder
         self.stim_paths = []
 
+        self.reduction_coef = np.load(red_coef)
 
 
         self.wav_files = []
@@ -121,8 +123,7 @@ class EEGMatTrainThread(BaseThread):
             stim_rms = np.load(rms)
             match_ratio = stim_rms/self.noise_rms
             set_trace()
-            # TODO: Match RMS of signals first
-            block_mix_wavs(wav, self.noise_path, out_wavpath, 1., snr*match_ratio)
+            block_mix_wavs(wav, self.noise_path, out_wavpath, 1.*self.reduction_coef, snr*match_ratio*self.reduction_coef)
             self.stim_paths.append(out_wavpath)
 
 
