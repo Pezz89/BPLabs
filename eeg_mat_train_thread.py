@@ -82,6 +82,8 @@ class EEGMatTrainThread(BaseThread):
         self.socketio.on_event('submit_eeg_response', self.submitTestResponse, namespace='/main')
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
 
+        self.dev_mode = True
+
     def loadStimulus(self):
         '''
         '''
@@ -140,7 +142,7 @@ class EEGMatTrainThread(BaseThread):
                     q.append(line)
             self.question.append(q)
         self.answers = np.empty(np.shape(self.question)[:2])
-        set_trace()
+        self.answers[:] = np.nan
 
 
     def testLoop(self):
@@ -155,7 +157,7 @@ class EEGMatTrainThread(BaseThread):
              self.question[0][1][0]}, namespace='/main'
         )
         # For each stimulus
-        trials = list(zip(self.wav_files, self.question))[self.trial_ind:]
+        trials = list(zip(self.stim_paths, self.question))[self.trial_ind:]
         for (wav, q) in trials:
             self.displayInstructions()
             self.waitForPartReady()
