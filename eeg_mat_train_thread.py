@@ -132,6 +132,16 @@ class EEGMatTrainThread(BaseThread):
                 # TODO: Output SI/snrs of each file to a CSV file
 
 
+        for q_file_path in questions:
+            q = []
+            with open(q_file_path, 'r') as q_file:
+                q_reader = csv.reader(q_file)
+                for line in q_reader:
+                    q.append(line)
+            self.question.append(q)
+        self.answers = np.empty(np.shape(self.question)[:2])
+        set_trace()
+
 
     def testLoop(self):
         '''

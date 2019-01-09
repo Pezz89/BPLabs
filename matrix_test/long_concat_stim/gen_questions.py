@@ -21,6 +21,17 @@ def main():
             q2_population = sentences[n_sentences//2:]
             q1 = random.choice(q1_population)
             q2 = random.choice(q2_population)
+
+            blank_ind1 = random.randint(0, len(q1)-1)
+            q1_ans = q1[blank_ind1]
+            q1[blank_ind1] = '_'
+
+            blank_ind2 = random.randint(0, len(q2)-1)
+            q2_ans = q2[blank_ind2]
+            q2[blank_ind2] = '_'
+            q1 = [" ".join(q1), q1_ans]
+            q2 = [" ".join(q2), q2_ans]
+
             qwriter.writerows([q1, q2])
 
 
