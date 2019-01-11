@@ -48,7 +48,7 @@ class EEGTestThread(BaseThread):
     '''
     def __init__(self, sessionFilepath=None,
                  listFolder="./matrix_test/short_concat_stim/out",
-                 noiseFilepath="./matrix_test/stimulus/wav/noise/noise.wav",
+                 noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
                  socketio=None, participant=None, srt_50=None, s_50=None):
         self.noise_path = noiseFilepath
         self.listDir = listFolder

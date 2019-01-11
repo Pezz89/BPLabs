@@ -20,6 +20,16 @@
     z-index: 15; /* Specify a stack order in case you're using a different order for other elements */
     font-size: xx-large;
 }
+#overlay > span {
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    color: white; /* Black background with opacity */
+    z-index: 15; /* Specify a stack order in case you're using a different order for other elements */
+    font-size: xx-large;
+}
 
 #instructions {
     position: fixed; /* Sit on top of the page content */

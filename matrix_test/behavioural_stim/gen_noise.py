@@ -209,6 +209,7 @@ def gen_noise(OutDir, b, fs, s_rms):
 def calc_speech_rms(files, silences, rmsDir, fs=44100, plot=False):
     '''
     '''
+    pdb.set_trace()
     f = sum(files, [])
     sumsqrd = 0.0
     n = 0
