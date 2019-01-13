@@ -5,6 +5,7 @@ import queue
 import sys
 import threading
 from pysndfile import PySndfile, construct_format
+from scipy.signal import square
 
 import sounddevice as sd
 import soundfile as sf
@@ -83,6 +84,24 @@ def block_lfilter(b, a, x, blocksize=8192):
         i += blocksize
     return out
 
+def block_process_wav(wavpath, out_wavpath, func, block_size=4096, **args):
+    '''
+    Mix two wav files, applying gains to each
+    '''
+    wav = PySndfile(wavpath_a, 'r')
+
+    out_wav = PySndfile(out_wavpath, 'w', construct_format('wav', 'pcm16'), wav.channels(), wav.samplerate())
+
+    i = 0
+    while i < wav_a.frames():
+        if i+block_size > wav_a.frames():
+            block_size = wav_a.frames()-i
+        x = wav_a.read_frames(block_size)
+        y = func(x, **args)
+        out_wav.write_frames(x1)
+        i += block_size
+
+
 def block_mix_wavs(wavpath_a, wavpath_b, out_wavpath, a_gain=1., b_gain=1., block_size=4096):
     '''
     Mix two wav files, applying gains to each
@@ -103,6 +122,13 @@ def block_mix_wavs(wavpath_a, wavpath_b, out_wavpath, a_gain=1., b_gain=1., bloc
         out_wav.write_frames(x1 + x2)
         i += block_size
 
+
+def gen_trigger(x, freq, length, fs):
+
+    duty = length*freq
+    trigger = square(2*np.pi*(x/fs)*freq, duty=duty)
+    trigger[trigger < 0] = 0
+    return trigger
 
 
 def calc_rms(y, window, plot=False):

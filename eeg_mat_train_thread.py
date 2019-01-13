@@ -62,7 +62,6 @@ class EEGMatTrainThread(BaseThread):
 
         self.reduction_coef = np.load(red_coef)
 
-
         self.wav_files = []
         self.marker_files = []
         self.question_files = []

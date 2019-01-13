@@ -1,6 +1,7 @@
 {% extends 'participant_index.html' %}
 {% block content %}
 <div id="main-div" class="outer">
+    <h3 id="question"></h3>
     <div class="mat_grid">
         <button type="button" href="#" disabled id="mat-0" class="Btn Btn-outline-secondary mat-button">Peter</button>
         <button type="button" href="#" disabled id="mat-1" class="Btn Btn-outline-secondary mat-button">got</button>
@@ -99,6 +100,10 @@
         socket.on('stim_playing', function(msg) {
             // Disable all inputs whilst processing
             $('#main-div').find('input, textarea, button, select').attr('disabled','disabled');
+        });
+        socket.on('question', function(msg) {
+            // Disable all inputs whilst processing
+            $('#question').text(msg);
         });
 
         socket.on('stim_done', function(msg) {

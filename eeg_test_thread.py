@@ -59,6 +59,8 @@ class EEGTestThread(BaseThread):
         self.question = []
         self.response = []
 
+        self.reduction_coef = np.load(red_coef)
+
         # Percent speech inteligibility (estimated using behavioural measure)
         # to present stimuli at
         self.si = np.array([20.0, 35.0, 50.0, 65.0, 80.0, 90.0, 100.0])

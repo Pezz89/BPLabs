@@ -108,6 +108,11 @@ def main():
                 sample(range(stim_count_half, stim_count-1), n_questions)
             ]).T
             a = 0
+            silence = np.zeros((88200, 3))
+            idx = np.arange(0, silence.shape[0])
+            trigger = gen_trigger(idx, 2., 0.01, fs)
+            silence[:, 2] = trigger
+            out_wav.write_frames(silence)
             for ind, (wav, txt) in enumerate(zip(merged_wavs, words)):
                 csv_line = [counter]
                 silence = np.zeros((int(np.random.uniform(int(0.3*44100), int(0.4*44100), 1)), 3))
