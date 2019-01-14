@@ -9,6 +9,7 @@ from filesystem import globDir
 from pysndfile import sndio
 import os
 from signalops import block_process_wav
+from shutil import copyfile
 
 def calc_potential_max(wavs, noise_filepath, out_dir, out_name):
     max_wav_samp = 0
@@ -21,7 +22,7 @@ def calc_potential_max(wavs, noise_filepath, out_dir, out_name):
     noise_rms = np.sqrt(np.mean(x**2))
     max_noise_samp = max(np.abs(x))
 
-    snr = -15.0
+    snr = 0.
     snr_fs = 10**(-snr/20)
     max_noise_samp *= max_wav_rms/noise_rms
     max_sampl = max_wav_samp+(max_noise_samp*snr_fs)
@@ -41,15 +42,30 @@ def main():
     mat_wavs = globDir(mat_dir, '*.wav')
 
     out_dir = "./out"
+    out_red_dir = os.path.join(out_dir, 'reduction_coefficients')
+    out_stim_dir = os.path.join(out_dir, 'stimulus')
     dir_must_exist(out_dir)
-    story_coef = calc_potential_max(story_wavs, noise_file, out_dir, "story_red_coef")
-    mat_coef = calc_potential_max(mat_wavs, noise_file, out_dir, "mat_red_coef")
-    da_coef = calc_potential_max(da_files, noise_file, out_dir, "da_red_coef")
+    dir_must_exist(out_red_dir)
+    dir_must_exist(out_stim_dir)
+    story_coef = calc_potential_max(story_wavs, noise_file, out_red_dir, "story_red_coef")
+    mat_coef = calc_potential_max(mat_wavs, noise_file, out_red_dir, "mat_red_coef")
+    da_coef = calc_potential_max(da_files, noise_file, out_red_dir, "da_red_coef")
 
     mat_cal_stim = "../matrix_test/long_concat_stim/out/stim/stim_0.wav"
     da_cal_stim = "../da_stim/stimulus/wav/10min_da.wav"
     click_cal_stim = "../click_stim/click_3000_20Hz.wav"
     story_cal_stim = "../eeg_story_stim/stimulus/odin_1_1.wav"
+
+    mat_out_stim = os.path.join(out_stim_dir, "mat_cal_stim.wav")
+    click_out_stim = os.path.join(out_stim_dir, "click_cal_stim.wav")
+    da_out_stim = os.path.join(out_stim_dir, "da_cal_stim.wav")
+    story_out_stim = os.path.join(out_stim_dir, "story_cal_stim.wav")
+
+    block_process_wav(mat_cal_stim, mat_out_stim, lambda x: x * mat_coef)
+    block_process_wav(story_cal_stim, story_out_stim, lambda x: x * story_coef)
+    block_process_wav(da_cal_stim, da_out_stim, lambda x: x * da_coef)
+    copyfile(click_cal_stim, click_out_stim)
+
 
 if __name__ == "__main__":
     main()

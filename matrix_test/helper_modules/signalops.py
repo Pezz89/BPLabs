@@ -88,17 +88,17 @@ def block_process_wav(wavpath, out_wavpath, func, block_size=4096, **args):
     '''
     Mix two wav files, applying gains to each
     '''
-    wav = PySndfile(wavpath_a, 'r')
+    wav = PySndfile(wavpath, 'r')
 
     out_wav = PySndfile(out_wavpath, 'w', construct_format('wav', 'pcm16'), wav.channels(), wav.samplerate())
 
     i = 0
-    while i < wav_a.frames():
-        if i+block_size > wav_a.frames():
-            block_size = wav_a.frames()-i
-        x = wav_a.read_frames(block_size)
+    while i < wav.frames():
+        if i+block_size > wav.frames():
+            block_size = wav.frames()-i
+        x = wav.read_frames(block_size)
         y = func(x, **args)
-        out_wav.write_frames(x1)
+        out_wav.write_frames(y)
         i += block_size
 
 
