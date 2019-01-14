@@ -64,7 +64,7 @@ class MatTestThread(BaseThread):
                  noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
                  noiseRMSFilepath="./matrix_test/behavioural_stim/stimulus/rms/noise_rms.npy",
                  listFolder="./matrix_test/behavioural_stim/stimulus/wav/sentence-lists/",
-                 red_coef="./matrix_test/short_concat_stim/out/reduction_coef.npy",
+                 red_coef="./calibration/out/reduction_coefficients/mat_red_coef.npy",
                  socketio=None, participant=None):
 
         self.listDir = listFolder

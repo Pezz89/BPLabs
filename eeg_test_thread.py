@@ -49,6 +49,7 @@ class EEGTestThread(BaseThread):
     def __init__(self, sessionFilepath=None,
                  listFolder="./matrix_test/short_concat_stim/out",
                  noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
+                 red_coef="./calibration/out/reduction_coefficients/mat_red_coef.npy",
                  socketio=None, participant=None, srt_50=None, s_50=None):
         self.noise_path = noiseFilepath
         self.listDir = listFolder
@@ -195,7 +196,6 @@ class EEGTestThread(BaseThread):
                            "running this test.")
         # Estimate speech intelligibility thresholds using predicted
         # psychometric function
-        reduction_coef = float(np.load(os.path.join(self.listDir, 'reduction_coef.npy')))
         s_50 *= 0.01
         x = logit(self.si * 0.01)
         snrs = (x/(4*s_50))+srt_50
@@ -241,7 +241,7 @@ class EEGTestThread(BaseThread):
                 out_meta_path = os.path.join(save_dir, "Stim_{0}_{1}.npy".format(ind, ind2))
                 with np.errstate(divide='raise'):
                     try:
-                        out_wav = (speech+(np.stack([noise, noise], axis=1)*snr_fs))*reduction_coef
+                        out_wav = (speech+(np.stack([noise, noise], axis=1)*snr_fs))*self.reduction_coef
                     except:
                         set_trace()
                 #out_wav = np.concatenate([out_wav, triggers[:, np.newaxis]], axis=1)

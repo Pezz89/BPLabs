@@ -53,7 +53,7 @@ class EEGMatTrainThread(BaseThread):
                  stimFolder="./matrix_test/long_concat_stim/out/stim",
                  noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
                  noiseRMSFilepath="./matrix_test/behavioural_stim/stimulus/rms/noise_rms.npy",
-                 red_coef="./matrix_test/short_concat_stim/out/reduction_coef.npy",
+                 red_coef="./calibration/out/reduction_coefficients/mat_red_coef.npy",
                  socketio=None, participant=None, srt_50=None, s_50=None):
         self.noise_path = noiseFilepath
         self.noise_rms = np.load(noiseRMSFilepath)
