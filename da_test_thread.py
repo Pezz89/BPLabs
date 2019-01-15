@@ -43,10 +43,11 @@ class DaTestThread(BaseThread):
                  noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
                  noiseRMSFilepath="./matrix_test/behavioural_stim/stimulus/rms/noise_rms.npy",
                  red_coef="./calibration/out/reduction_coefficients/da_red_coef.npy",
+                 cal_coef="./calibration/out/calibration_coefficients/da_cal_coef.npy",
                  nTrials=2, socketio=None, participant=None, srt_50=None,
                  s_50=None):
 
-        self.reduction_coef = np.load(red_coef)
+        self.reduction_coef = np.load(red_coef)*np.load(cal_coef)
         self.wav_file = os.path.join(stimFolder, '3000_da.wav')
         self.noise_path = noiseFilepath
         self.noise_rms = np.load(noiseRMSFilepath)

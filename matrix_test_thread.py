@@ -65,12 +65,13 @@ class MatTestThread(BaseThread):
                  noiseRMSFilepath="./matrix_test/behavioural_stim/stimulus/rms/noise_rms.npy",
                  listFolder="./matrix_test/behavioural_stim/stimulus/wav/sentence-lists/",
                  red_coef="./calibration/out/reduction_coefficients/mat_red_coef.npy",
+                 cal_coef="./calibration/out/calibration_coefficients/da_cal_coef.npy",
                  socketio=None, participant=None):
 
         self.listDir = listFolder
 
 
-        self.reduction_coef = np.load(red_coef)
+        self.reduction_coef = np.load(red_coef)*np.load(cal_coef)
         self.listN = int(listN)
         self.loadedLists = []
         self.lists = []

@@ -50,6 +50,7 @@ class EEGTestThread(BaseThread):
                  listFolder="./matrix_test/short_concat_stim/out",
                  noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
                  red_coef="./calibration/out/reduction_coefficients/mat_red_coef.npy",
+                 cal_coef="./calibration/out/calibration_coefficients/da_cal_coef.npy",
                  socketio=None, participant=None, srt_50=None, s_50=None):
         self.noise_path = noiseFilepath
         self.listDir = listFolder
@@ -60,7 +61,7 @@ class EEGTestThread(BaseThread):
         self.question = []
         self.response = []
 
-        self.reduction_coef = np.load(red_coef)
+        self.reduction_coef = np.load(red_coef)*np.load(cal_coef)
 
         # Percent speech inteligibility (estimated using behavioural measure)
         # to present stimuli at
