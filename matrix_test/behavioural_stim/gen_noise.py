@@ -18,9 +18,9 @@ import matplotlib.pyplot as plt
 
 from pathops import dir_must_exist
 try:
-    from signalops import rolling_window_lastaxis, calc_rms
+    from signalops import rolling_window_lastaxis, calc_rms, block_process_wav
 except ImportError:
-    from .signalops import rolling_window_lastaxis, block_lfilter, calc_rms
+    from .signalops import rolling_window_lastaxis, block_lfilter, calc_rms, block_process_wav
 
 import scipy.signal as sgnl
 from scipy.stats import pearsonr
@@ -46,6 +46,7 @@ def block_lfilter_wav(b, a, x, outfile, fmt, fs, blocksize=8192):
     sndfile = PySndfile(outfile, 'w', fmt, 1, fs)
     i = 0
     y_out = np.zeros(x.size)
+    y_max = 0.0
     while i < x.size:
         print("Filtering {0} to {1} of {2}".format(i, i+blocksize, x.size))
         if i+blocksize > x.size:
@@ -56,8 +57,9 @@ def block_lfilter_wav(b, a, x, outfile, fmt, fs, blocksize=8192):
             y, new_state = sgnl.lfilter(b,a,x[i:i+blocksize], zi=new_state)
             sndfile.write_frames(y)
             y_out[i:i+y.size] = y
+        y_max = np.max([y_max, np.abs(y).max()])
         i += blocksize
-    return y_out
+    return y_out, y_max
 
 
 def synthesize_trial(wavFileMatrix, indexes):
@@ -129,18 +131,27 @@ def gen_indexes():
 
 def gen_rms(files, OutDir):
     rmsFiles = []
+    OutPeakDir = './stimulus/peak'
     for sentenceList in files:
         for file in sentenceList:
             head, tail = os.path.split(file)
             tail = os.path.splitext(tail)[0]
-            tail = tail + "_rms.npy"
+            tail_rms = tail + "_rms.npy"
             dir_must_exist(OutDir)
-            rmsFilepath = os.path.join(OutDir, tail)
+            rmsFilepath = os.path.join(OutDir, tail_rms)
             print("Generating: "+rmsFilepath)
             y, fs, _ = sndio.read(file)
             y_rms = calc_rms(y, round(0.02*fs))
             np.save(rmsFilepath, y_rms)
             rmsFiles.append(rmsFilepath)
+
+            y, fs, _ = sndio.read(file)
+            tail_peak = tail + "_peak.npy"
+            dir_must_exist(OutPeakDir)
+            peakFilepath = os.path.join(OutPeakDir, tail_peak)
+            print("Generating: "+peakFilepath)
+            peak = np.abs(y).max()
+            np.save(peakFilepath, peak)
     return rmsFiles
 
 def detect_silences(rmsFiles, fs):
@@ -199,17 +210,20 @@ def gen_noise(OutDir, b, fs, s_rms):
     dir_must_exist(noiseDir)
     noiseDir = os.path.join(noiseDir, 'noise')
     dir_must_exist(noiseDir)
-    y = block_lfilter_wav(b, [1.0], x, os.path.join(noiseDir, 'noise.wav'), 65538, 44100)
+    y, y_max = block_lfilter_wav(b, [1.0], x, os.path.join(noiseDir, 'noise.wav'), 65538, 44100)
+    block_process_wav(os.path.join(noiseDir, 'noise.wav'), os.path.join(noiseDir, 'noise_norm.wav'), lambda x: x / (y_max * 0.95))
     noise_rms_path = os.path.join(noiseRMSDir, 'noise_rms.npy')
+    y = y/(np.abs(y).max() * 0.95)
     rms = np.sqrt(np.mean(y**2))
+    peak = np.abs(y).max()
     np.save(noise_rms_path, rms)
+    np.save('./stimulus/peak/noise_peak.npy', peak)
     return y
 
 
 def calc_speech_rms(files, silences, rmsDir, fs=44100, plot=False):
     '''
     '''
-    pdb.set_trace()
     f = sum(files, [])
     sumsqrd = 0.0
     n = 0

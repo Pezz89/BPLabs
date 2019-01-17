@@ -65,7 +65,7 @@ class EEGTestThread(BaseThread):
 
         # Percent speech inteligibility (estimated using behavioural measure)
         # to present stimuli at
-        self.si = np.array([20.0, 35.0, 50.0, 65.0, 80.0, 90.0, 100.0])
+        self.si = np.array([20.0, 35.0, 50.0, 65.0, 80.0, 90.0])
         self.trial_ind = 0
         self._stopevent = Event()
 
@@ -200,7 +200,8 @@ class EEGTestThread(BaseThread):
         s_50 *= 0.01
         x = logit(self.si * 0.01)
         snrs = (x/(4*s_50))+srt_50
-        snr_map = pd.DataFrame({"speech_intel" : self.si, "snr": snrs})
+        snrs = np.append(snrs, np.inf)
+        snr_map = pd.DataFrame({"speech_intel" : np.append(self.si, 0.0), "snr": snrs})
         save_dir = self.participant.data_paths['eeg_test/stimulus']
         snr_map_path = os.path.join(save_dir, "snr_map.csv")
         snr_map.to_csv(snr_map_path)
@@ -225,7 +226,7 @@ class EEGTestThread(BaseThread):
             audio, fs, enc, fmt = sndio.read(wav, return_format=True)
 
             speech = audio[:, :2]
-            #triggers = audio[:, 2]
+            triggers = audio[:, 2]
             wf = []
             for ind2, s in enumerate(snr):
                 start = randint(0, noise_file.frames()-speech.shape[0])
@@ -245,7 +246,7 @@ class EEGTestThread(BaseThread):
                         out_wav = (speech+(np.stack([noise, noise], axis=1)*snr_fs))*self.reduction_coef
                     except:
                         set_trace()
-                #out_wav = np.concatenate([out_wav, triggers[:, np.newaxis]], axis=1)
+                out_wav = np.concatenate([out_wav, triggers[:, np.newaxis]], axis=1)
                 sndio.write(out_wav_path, out_wav, fs, fmt, enc)
                 np.save(out_meta_path, snr)
                 wf.append(out_wav_path)

@@ -119,7 +119,14 @@ def block_mix_wavs(wavpath_a, wavpath_b, out_wavpath, a_gain=1., b_gain=1., bloc
         x2 = wav_b.read_frames(block_size)
         x1 *= a_gain
         x2 *= b_gain
-        out_wav.write_frames(x1 + x2)
+        if x1.shape[1] == 3:
+            y = np.zeros(x1.shape)
+            y[:, 0] = x1[:, 0] + x2
+            y[:, 1] = x1[:, 1] + x2
+            y[:, 2] = x1[:, 2]
+        else:
+            y = x1 + x2
+        out_wav.write_frames(y)
         i += block_size
 
 

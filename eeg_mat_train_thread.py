@@ -83,7 +83,7 @@ class EEGMatTrainThread(BaseThread):
         self.socketio.on_event('submit_eeg_response', self.submitTestResponse, namespace='/main')
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
 
-        self.dev_mode = True
+        self.dev_mode = False
 
     def loadStimulus(self):
         '''
@@ -112,7 +112,11 @@ class EEGMatTrainThread(BaseThread):
 
         wavs = globDir(self.stim_folder, "*.wav")
         questions = globDir(self.stim_folder, "stim_questions_*.csv")
+        if not len(questions):
+            raise FileNotFoundError("No question files found in {}".format(self.stim_dir))
         rms_files = globDir(self.stim_folder, "stim_*_rms.npy")
+        if not len(rms_files):
+            raise FileNotFoundError("No rms files found in {}".format(self.stim_dir))
 
         self.socketio.emit('test_stim_load', namespace='/main')
         # Add noise to audio files at set SNRs and write to participant

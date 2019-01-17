@@ -22,7 +22,7 @@ def calc_potential_max(wavs, noise_filepath, out_dir, out_name):
     noise_rms = np.sqrt(np.mean(x**2))
     max_noise_samp = max(np.abs(x))
 
-    snr = 0.
+    snr = -15.
     snr_fs = 10**(-snr/20)
     max_noise_samp *= max_wav_rms/noise_rms
     max_sampl = max_wav_samp+(max_noise_samp*snr_fs)

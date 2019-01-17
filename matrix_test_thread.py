@@ -61,11 +61,11 @@ class MatTestThread(BaseThread):
     Thread for running server side matrix test operations
     '''
     def __init__(self, listN=3, sessionFilepath=None,
-                 noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
+                 noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise_norm.wav",
                  noiseRMSFilepath="./matrix_test/behavioural_stim/stimulus/rms/noise_rms.npy",
                  listFolder="./matrix_test/behavioural_stim/stimulus/wav/sentence-lists/",
                  red_coef="./calibration/out/reduction_coefficients/mat_red_coef.npy",
-                 cal_coef="./calibration/out/calibration_coefficients/da_cal_coef.npy",
+                 cal_coef="./calibration/out/calibration_coefficients/mat_cal_coef.npy",
                  socketio=None, participant=None):
 
         self.listDir = listFolder
@@ -224,7 +224,6 @@ class MatTestThread(BaseThread):
         sortedPC = percent_correct[sortedSNRind]
         x = np.linspace(np.min(sortedSNR)-5, np.max(sortedSNR)+3, 3000)
         srt_50, s_50 = res.x
-        set_trace()
         x_y = self.logisticFunction(x, srt_50, s_50)
         x_y *= 100.
         # np.savez('./plot.npz', x, x_y*100., sortedSNR, sortedPC)
@@ -403,6 +402,7 @@ class MatTestThread(BaseThread):
         y = x_noise
         # Set speech to start 500ms after the noise, scaled to the desired SNR
         sigStart = round(self.fs/2.)
+        set_trace()
         y[sigStart:sigStart+x.size] += x*snr_fs
         y *= self.reduction_coef
         return y

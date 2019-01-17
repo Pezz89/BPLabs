@@ -13,6 +13,19 @@ import numpy as np
 import multiprocessing
 from helper import multiprocess_map
 
+def flat_for(a, f, *args):
+        a = a.reshape(-1)
+        for i, v in enumerate(a):
+            print("Sample {0} of {1}".format(i, a.size))
+            a[i] = f(v, *args)
+
+def window_rms(a, window_size):
+    print("Squaring...")
+    a2 = a**2
+    print("Convolving...")
+    window = np.ones(window_size)/float(window_size)
+    return np.sqrt(np.convolve(a2, window, 'same'))
+
 def gen_rms(file, OutDir):
     head, tail = os.path.split(file)
     tail = os.path.splitext(tail)[0]
@@ -22,7 +35,8 @@ def gen_rms(file, OutDir):
     print("Generating: "+rmsFilepath)
     y, fs, _ = sndio.read(file)
 
-    y_rms = calc_rms(y, round(0.02*fs))
+    y = y[:, 0]
+    y_rms = window_rms(y, round(0.02*fs))
     np.save(rmsFilepath, y_rms)
     return rmsFilepath
 

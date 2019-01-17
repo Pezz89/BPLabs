@@ -129,20 +129,33 @@ def gen_indexes():
         y[i] = x.copy()
     return y
 
-def gen_rms(files, OutDir):
+def gen_rms_peak(files, OutRMSDir, OutPeakDir):
     rmsFiles = []
+    peakFiles = []
     for file in files:
         head, tail = os.path.split(file)
         tail = os.path.splitext(tail)[0]
         tail = tail + "_rms.npy"
-        dir_must_exist(OutDir)
-        rmsFilepath = os.path.join(OutDir, tail)
+        dir_must_exist(OutRMSDir)
+        rmsFilepath = os.path.join(OutRMSDir, tail)
         print("Generating: "+rmsFilepath)
         y, fs, _ = sndio.read(file)
+        y = y[:, 1]
         y_rms = calc_rms(y, round(0.02*fs))
-        np.save(rmsFilepath, y_rms)
+        np.save(rmsFilepath, peak)
         rmsFiles.append(rmsFilepath)
-    return rmsFiles
+
+        head, tail = os.path.split(file)
+        tail = os.path.splitext(tail)[0]
+        tail = tail + "_peak.npy"
+        dir_must_exist(OutPeakDir)
+        peakFilepath = os.path.join(OutPeakDir, tail)
+        print("Generating: "+peakFilepath)
+        peak = np.abs(y).max()
+        pdb.set_trace()
+        np.save(peakFilepath, peak)
+        peakFiles.append(peakFilepath)
+    return rmsFiles, peakFiles
 
 def detect_silences(rmsFiles, fs, seg_min_size=0.02):
     print("Detecting silence in wav files...")
@@ -167,6 +180,7 @@ def calc_spectrum(files, silences, fs=44100, plot=False):
     print("Calculating LTASS...")
     for ind, file in enumerate(files):
         x, fs, _ = sndio.read(file)
+        x = x[:, 1]
         f, t, Zxx = sgnl.stft(x, window=np.ones(window), nperseg=window, noverlap=0)
         sil = silences[ind]
         sTemp = np.zeros((sil.shape[0], t.size), dtype=bool)
@@ -216,6 +230,7 @@ def calc_speech_rms(files, silences, rmsDir, fs=44100, plot=False):
     n = 0
     for wavfile, sil in zip(f, silences):
         y, fs, _ = sndio.read(wavfile)
+        y = y[:, 1]
         t = np.arange(y.size)
         sTemp = np.zeros(t.size, dtype=bool)
         print("Started")
@@ -246,14 +261,19 @@ if __name__ == "__main__":
 
     rmsDir = os.path.join(args['OutDir'], "rms")
     dir_must_exist(rmsDir)
+    peakDir = os.path.join(args['OutDir'], "peak")
+    dir_must_exist(peakDir)
     wavDir = os.path.join(args['OutDir'], "wav")
     dir_must_exist(wavDir)
     if args['CalcRMS']:
         daFile = gen_da_stim(3333, os.path.join(wavDir, '10min_da.wav'))
-        rmsFiles = gen_rms([daFile], rmsDir)
+        rmsFiles, peakFiles = gen_rms_peak([daFile], rmsDir, peakDir)
+        rmsFile = rmsFiles[0]
+        peakFile = peakFiles[0]
     else:
         daFile = globDir(wavDir, '*.wav')[0]
         rmsFile = globDir(rmsDir, '*.npy')[0]
+        peakFile = globDir(peakDir, '*.npy')[0]
     silences = detect_silences([rmsFile], 44100, None)
     s_rms = calc_speech_rms([daFile], silences, rmsDir)
     b = calc_spectrum([daFile], silences)

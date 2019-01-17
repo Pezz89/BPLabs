@@ -40,8 +40,9 @@ class DaTestThread(BaseThread):
     '''
     def __init__(self, sessionFilepath=None,
                  stimFolder='./da_stim/',
-                 noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
+                 noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise_norm.wav",
                  noiseRMSFilepath="./matrix_test/behavioural_stim/stimulus/rms/noise_rms.npy",
+                 daPeakFilepath="./da_stim/stimulus/peak/10min_da_peak.npy",
                  red_coef="./calibration/out/reduction_coefficients/da_red_coef.npy",
                  cal_coef="./calibration/out/calibration_coefficients/da_cal_coef.npy",
                  nTrials=2, socketio=None, participant=None, srt_50=None,
@@ -58,7 +59,7 @@ class DaTestThread(BaseThread):
         self.nTrials = nTrials
         self.trial_ind = 0
         self._stopevent = Event()
-        self.si = np.array([20.0, 35.0, 50.0, 65.0, 80.0, 90.0, 100.0])
+        self.si = np.array([20.0, 35.0, 50.0, 65.0, 80.0, 90.0])
 
         super(DaTestThread, self).__init__(self.test_name,
                                            sessionFilepath=sessionFilepath,
@@ -130,6 +131,7 @@ class DaTestThread(BaseThread):
         shuffle(self.si)
         x = logit(self.si * 0.01)
         snrs = (x/(4*s_50))+srt_50
+        snrs = np.append(snrs, np.inf)
         self.snr_fs = 10**(-snrs/20)
         self.snr_fs[self.snr_fs == np.inf] = 0.
         if (self.snr_fs == -np.inf).any():
