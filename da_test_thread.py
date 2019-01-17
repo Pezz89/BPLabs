@@ -40,8 +40,8 @@ class DaTestThread(BaseThread):
     '''
     def __init__(self, sessionFilepath=None,
                  stimFolder='./da_stim/',
-                 noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise_norm.wav",
-                 noiseRMSFilepath="./matrix_test/behavioural_stim/stimulus/rms/noise_rms.npy",
+                 noiseFilepath="./da_stim/noise/wav/noise/noise_norm.wav",
+                 noiseRMSFilepath="./da_stim/noise/rms/noise_rms.npy",
                  daPeakFilepath="./da_stim/stimulus/peak/10min_da_peak.npy",
                  red_coef="./calibration/out/reduction_coefficients/da_red_coef.npy",
                  cal_coef="./calibration/out/calibration_coefficients/da_cal_coef.npy",
@@ -157,7 +157,11 @@ class DaTestThread(BaseThread):
                 out_wavpath =  os.path.join(out_dir, fp)
                 stim_rms = np.load(rms)
                 match_ratio = stim_rms/self.noise_rms
-                block_mix_wavs(wav, self.noise_path, out_wavpath, 1.*self.reduction_coef, snr_fs*match_ratio*self.reduction_coef)
+                set_trace()
+                block_mix_wavs(wav, self.noise_path, out_wavpath,
+                               1.*self.reduction_coef,
+                               snr_fs*match_ratio*self.reduction_coef,
+                               mute_left=True)
                 self.stim_paths.extend([out_wavpath] * self.nTrials)
                 writer.writerow([wav, snr_fs, rms, si, snr])
                 # TODO: Output SI/snrs of each file to a CSV file

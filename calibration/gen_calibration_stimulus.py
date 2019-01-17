@@ -36,7 +36,8 @@ def main():
     da_files = ["../da_stim/stimulus/3000_da.wav"]
     story_dir = "../eeg_story_stim/stimulus"
     mat_dir = "../matrix_test/speech_components"
-    noise_file = "../matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav"
+    noise_file = "../matrix_test/behavioural_stim/stimulus/wav/noise/noise_norm.wav"
+    da_noise_file = "../da_stim/noise/wav/noise/noise_norm.wav"
 
     story_wavs = globDir(story_dir, '*.wav')
     mat_wavs = globDir(mat_dir, '*.wav')
@@ -47,9 +48,11 @@ def main():
     dir_must_exist(out_dir)
     dir_must_exist(out_red_dir)
     dir_must_exist(out_stim_dir)
+    import pdb
+    pdb.set_trace()
     story_coef = calc_potential_max(story_wavs, noise_file, out_red_dir, "story_red_coef")
     mat_coef = calc_potential_max(mat_wavs, noise_file, out_red_dir, "mat_red_coef")
-    da_coef = calc_potential_max(da_files, noise_file, out_red_dir, "da_red_coef")
+    da_coef = calc_potential_max(da_files, da_noise_file, out_red_dir, "da_red_coef")
 
     mat_cal_stim = "../matrix_test/long_concat_stim/out/stim/stim_0.wav"
     da_cal_stim = "../da_stim/stimulus/wav/10min_da.wav"

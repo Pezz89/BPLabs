@@ -20,9 +20,9 @@ from gen_da import gen_da_stim
 
 from pathops import dir_must_exist
 try:
-    from signalops import rolling_window_lastaxis, calc_rms
+    from signalops import rolling_window_lastaxis, window_rms, block_process_wav
 except ImportError:
-    from .signalops import rolling_window_lastaxis, block_lfilter, calc_rms
+    from .signalops import rolling_window_lastaxis, block_lfilter, window_rms, block_process_wav
 
 import scipy.signal as sgnl
 from scipy.stats import pearsonr
@@ -48,6 +48,7 @@ def block_lfilter_wav(b, a, x, outfile, fmt, fs, blocksize=8192):
     sndfile = PySndfile(outfile, 'w', fmt, 1, fs)
     i = 0
     y_out = np.zeros(x.size)
+    y_max = 0.0
     while i < x.size:
         print("Filtering {0} to {1} of {2}".format(i, i+blocksize, x.size))
         if i+blocksize > x.size:
@@ -58,8 +59,9 @@ def block_lfilter_wav(b, a, x, outfile, fmt, fs, blocksize=8192):
             y, new_state = sgnl.lfilter(b,a,x[i:i+blocksize], zi=new_state)
             sndfile.write_frames(y)
             y_out[i:i+y.size] = y
+        y_max = np.max([y_max, np.abs(y).max()])
         i += blocksize
-    return y_out
+    return y_out, y_max
 
 
 def synthesize_trial(wavFileMatrix, indexes):
@@ -140,9 +142,8 @@ def gen_rms_peak(files, OutRMSDir, OutPeakDir):
         rmsFilepath = os.path.join(OutRMSDir, tail)
         print("Generating: "+rmsFilepath)
         y, fs, _ = sndio.read(file)
-        y = y[:, 1]
-        y_rms = calc_rms(y, round(0.02*fs))
-        np.save(rmsFilepath, peak)
+        y_rms = window_rms(y, round(0.02*fs))
+        np.save(rmsFilepath, y_rms)
         rmsFiles.append(rmsFilepath)
 
         head, tail = os.path.split(file)
@@ -152,7 +153,6 @@ def gen_rms_peak(files, OutRMSDir, OutPeakDir):
         peakFilepath = os.path.join(OutPeakDir, tail)
         print("Generating: "+peakFilepath)
         peak = np.abs(y).max()
-        pdb.set_trace()
         np.save(peakFilepath, peak)
         peakFiles.append(peakFilepath)
     return rmsFiles, peakFiles
@@ -180,7 +180,6 @@ def calc_spectrum(files, silences, fs=44100, plot=False):
     print("Calculating LTASS...")
     for ind, file in enumerate(files):
         x, fs, _ = sndio.read(file)
-        x = x[:, 1]
         f, t, Zxx = sgnl.stft(x, window=np.ones(window), nperseg=window, noverlap=0)
         sil = silences[ind]
         sTemp = np.zeros((sil.shape[0], t.size), dtype=bool)
@@ -215,7 +214,9 @@ def gen_noise(OutDir, b, fs, s_rms):
     dir_must_exist(noiseDir)
     noiseDir = os.path.join(noiseDir, 'noise')
     dir_must_exist(noiseDir)
-    y = block_lfilter_wav(b, [1.0], x, os.path.join(noiseDir, 'noise.wav'), 65538, 44100)
+    y, y_max = block_lfilter_wav(b, [1.0], x, os.path.join(noiseDir, 'noise.wav'), 65538, 44100)
+    block_process_wav(os.path.join(noiseDir, 'noise.wav'), os.path.join(noiseDir, 'noise_norm.wav'), lambda x: x / (y_max * 0.95))
+    y = y/(np.abs(y).max() * 0.95)
     noise_rms_path = os.path.join(noiseRMSDir, 'noise_rms.npy')
     rms = np.sqrt(np.mean(y**2))
     np.save(noise_rms_path, rms)
@@ -230,7 +231,6 @@ def calc_speech_rms(files, silences, rmsDir, fs=44100, plot=False):
     n = 0
     for wavfile, sil in zip(f, silences):
         y, fs, _ = sndio.read(wavfile)
-        y = y[:, 1]
         t = np.arange(y.size)
         sTemp = np.zeros(t.size, dtype=bool)
         print("Started")
@@ -255,7 +255,7 @@ if __name__ == "__main__":
                                      'training TRF decoder by concatenating '
                                      'matrix test materials')
     parser.add_argument('--OutDir', type=PathType(exists=None, type='dir'),
-                        default='./stimulus', help='Output directory')
+                        default='./noise', help='Output directory')
     parser.add_argument('--CalcRMS', action='store_true')
     args = {k:v for k,v in vars(parser.parse_args()).items() if v is not None}
 
@@ -266,15 +266,15 @@ if __name__ == "__main__":
     wavDir = os.path.join(args['OutDir'], "wav")
     dir_must_exist(wavDir)
     if args['CalcRMS']:
-        daFile = gen_da_stim(3333, os.path.join(wavDir, '10min_da.wav'))
+        daFile = globDir('./noise_source', 'male_speech_resamp.wav')[0]
         rmsFiles, peakFiles = gen_rms_peak([daFile], rmsDir, peakDir)
         rmsFile = rmsFiles[0]
         peakFile = peakFiles[0]
     else:
-        daFile = globDir(wavDir, '*.wav')[0]
+        daFile = globDir('./noise_source', 'male_speech_resamp.wav')[0]
         rmsFile = globDir(rmsDir, '*.npy')[0]
         peakFile = globDir(peakDir, '*.npy')[0]
-    silences = detect_silences([rmsFile], 44100, None)
-    s_rms = calc_speech_rms([daFile], silences, rmsDir)
-    b = calc_spectrum([daFile], silences)
+    #silences = detect_silences([rmsFile], 44100, None)
+    s_rms = calc_speech_rms(['./stimulus/3000_da.wav'], [[]], rmsDir)
+    b = calc_spectrum([daFile], [np.array([])])
     y = gen_noise(args['OutDir'], b, 44100, s_rms)

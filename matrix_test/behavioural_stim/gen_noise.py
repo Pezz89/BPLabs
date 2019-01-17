@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys
 sys.path.insert(0, "../helper_modules")
+sys.path.insert(0, "../matrix_test/helper_modules/")
 
 import argparse
 import os

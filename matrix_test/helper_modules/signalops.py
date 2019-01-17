@@ -101,8 +101,14 @@ def block_process_wav(wavpath, out_wavpath, func, block_size=4096, **args):
         out_wav.write_frames(y)
         i += block_size
 
+def window_rms(a, window_size):
+    print("Squaring...")
+    a2 = a**2
+    print("Convolving...")
+    window = np.ones(window_size)/float(window_size)
+    return np.sqrt(np.convolve(a2, window, 'same'))
 
-def block_mix_wavs(wavpath_a, wavpath_b, out_wavpath, a_gain=1., b_gain=1., block_size=4096):
+def block_mix_wavs(wavpath_a, wavpath_b, out_wavpath, a_gain=1., b_gain=1., block_size=4096, mute_left=False):
     '''
     Mix two wav files, applying gains to each
     '''
@@ -124,6 +130,8 @@ def block_mix_wavs(wavpath_a, wavpath_b, out_wavpath, a_gain=1., b_gain=1., bloc
             y[:, 0] = x1[:, 0] + x2
             y[:, 1] = x1[:, 1] + x2
             y[:, 2] = x1[:, 2]
+        if mute_left:
+            y[:, 0] = 0.0
         else:
             y = x1 + x2
         out_wav.write_frames(y)
