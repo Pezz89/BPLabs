@@ -20,7 +20,7 @@ def main():
     for key in vals.keys():
         v.append(vals[key])
     v = np.array(v)
-    v = v/v.max()
+    v = v/(v.max()*2)
     v[np.isnan(v)] = 0.0
     out = {}
     for key, val in zip(vals.keys(), v):
