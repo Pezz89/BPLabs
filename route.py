@@ -108,6 +108,13 @@ def create_participant_page():
     part_num = gen_participant_num(participants)
     return render_template("create_participant.html", num=part_num)
 
+def set_trace():
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+    log = logging.getLogger('engineio')
+    log.setLevel(logging.ERROR)
+    pdb.set_trace()
 @server.route('/participant/create/submit', methods=["POST"])
 def create_participant_submit():
     data = request.form

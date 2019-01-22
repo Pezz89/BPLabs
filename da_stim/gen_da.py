@@ -9,13 +9,16 @@ import pdb
 import matplotlib.pyplot as plt
 from pathops import dir_must_exist
 from signalops import gen_trigger
+import resampy
 
 def gen_da_stim(n, outpath):
     da_file = './BioMAP_da-40ms.wav'
     da_stim, fs, enc, fmt = sndio.read(da_file, return_format=True)
     prestim_size = 0.0158
-    full_stim_size = 0.09174311926605504
-    da_size = 0.04
+    # Repetition rate in Hz
+    repetition_rate = 10.9
+    full_stim_size = 1./repetition_rate
+    da_size = da_stim.size / fs
     prestim = np.zeros(int(fs*prestim_size))
     poststim = np.zeros(int(fs*((full_stim_size-prestim_size)-da_size)))
     y_part = np.concatenate([prestim, da_stim, poststim])
@@ -30,7 +33,8 @@ def gen_da_stim(n, outpath):
     trigger = gen_trigger(idx, 2., 0.01, fs)
 
     y = np.vstack((y_l, y_r, trigger))
-    sndio.write(outpath, y.T, rate = fs, format = fmt, enc=enc)
+    y = resampy.resample(y, fs, 44100).T
+    sndio.write(outpath, y, rate = 44100, format = fmt, enc=enc)
     return outpath
 
 

@@ -13,7 +13,7 @@ from shutil import copy2
 from test_base import BaseThread
 
 from matrix_test.helper_modules.signalops import play_wav, block_mix_wavs
-from pathops import dir_must_exist
+from pathops import dir_must_exist, delete_if_exists
 from scipy.special import logit
 from config import socketio
 import csv
@@ -59,7 +59,8 @@ class DaTestThread(BaseThread):
         self.nTrials = nTrials
         self.trial_ind = 0
         self._stopevent = Event()
-        self.si = np.array([20.0, 35.0, 50.0, 65.0, 80.0, 90.0])
+        # (Completely clean stimulus added by default later)
+        self.si = np.array([19.0, 50.0, 81.0, 90.0])
 
         super(DaTestThread, self).__init__(self.test_name,
                                            sessionFilepath=sessionFilepath,
@@ -132,20 +133,23 @@ class DaTestThread(BaseThread):
         x = logit(self.si * 0.01)
         snrs = (x/(4*s_50))+srt_50
         snrs = np.append(snrs, np.inf)
+        self.si = np.append(self.si, np.inf)
+
         self.snr_fs = 10**(-snrs/20)
         self.snr_fs[self.snr_fs == np.inf] = 0.
         if (self.snr_fs == -np.inf).any():
             raise ValueError("Noise infinitely louder than signal for an SNR (SNRs: {})".format(self.snr_fs))
 
 
-        wavs = globDir(self.stim_folder, "3000_da.wav") * len(self.si)
-        rms_files = globDir(self.stim_folder, "overall_da_rms.npy") * len(self.si)
+        wavs = globDir(self.stim_folder, "3000_da.wav") * len(snrs)
+        rms_files = globDir(self.stim_folder, "overall_da_rms.npy") * len(snrs)
 
         self.socketio.emit('test_stim_load', namespace='/main')
         # Add noise to audio files at set SNRs and write to participant
         # directory
         self.data_path = self.participant.data_paths[self.test_name]
         out_dir = os.path.join(self.data_path, "stimulus")
+        delete_if_exists(out_dir)
         out_info = os.path.join(out_dir, "stim_info.csv")
         dir_must_exist(out_dir)
 
@@ -157,7 +161,6 @@ class DaTestThread(BaseThread):
                 out_wavpath =  os.path.join(out_dir, fp)
                 stim_rms = np.load(rms)
                 match_ratio = stim_rms/self.noise_rms
-                set_trace()
                 block_mix_wavs(wav, self.noise_path, out_wavpath,
                                1.*self.reduction_coef,
                                snr_fs*match_ratio*self.reduction_coef,

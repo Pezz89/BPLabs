@@ -265,7 +265,6 @@ class BaseThread(Thread):
         Restore thread state from a saved session filepath
         '''
         with open(filepath, 'rb') as f:
-            set_trace()
             self.__dict__.update(dill.load(f))
 
 

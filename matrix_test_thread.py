@@ -136,7 +136,7 @@ class MatTestThread(BaseThread):
         Main loop for iteratively finding the SRT
         '''
         self.waitForPageLoad()
-        while not self.finishTest and not self._stopevent.isSet():
+        while not self.finishTest and not self._stopevent.isSet() and len(self.availableSentenceInds):
             self.plotSNR()
             self.y = self.generateTrial(self.snr)
             self.playStimulus(self.y, self.fs)
@@ -205,7 +205,7 @@ class MatTestThread(BaseThread):
         with np.errstate(divide='raise'):
             try:
                 a = np.concatenate(res)
-                a[a == 0] = a.max()
+                a[a == 0] = np.finfo(float).eps
                 out = -np.sum(np.log(a))
             except:
                 set_trace()
@@ -402,7 +402,6 @@ class MatTestThread(BaseThread):
         y = x_noise
         # Set speech to start 500ms after the noise, scaled to the desired SNR
         sigStart = round(self.fs/2.)
-        set_trace()
         y[sigStart:sigStart+x.size] += x*snr_fs
         y *= self.reduction_coef
         return y

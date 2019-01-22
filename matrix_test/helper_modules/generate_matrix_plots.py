@@ -54,10 +54,12 @@ def logisticFuncLiklihood(args):
     with np.errstate(divide='raise'):
         try:
             a = np.concatenate(res)
-            a[a == 0] = a.max()
+            a[a == 0] = np.finfo(float).eps
             out = -np.sum(np.log(a))
         except:
             set_trace()
+    if out == 0.:
+        pdb.set_trace()
     return out
 
 
@@ -69,6 +71,7 @@ def fitLogistic():
     wordsCorrect = wordsCorrect[:trialN].astype(float)
     trackSNR = snrTrack[:trialN]
     res = minimize(logisticFuncLiklihood, np.array([np.mean(trackSNR),1.0]))
+    pdb.set_trace()
     percent_correct = (np.sum(wordsCorrect, axis=1)/wordsCorrect.shape[1])*100.
     sortedSNRind = np.argsort(-trackSNR)
     sortedSNR = trackSNR[sortedSNRind]

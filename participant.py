@@ -2,8 +2,18 @@ from pathops import dir_must_exist
 import os
 import dill
 import numpy as np
+import pdb
 
 from config import server, socketio, participants
+
+def set_trace():
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+    log = logging.getLogger('engineio')
+    log.setLevel(logging.ERROR)
+    pdb.set_trace()
+
 
 def find_participants(folder='./participant_data/'):
     '''
@@ -25,7 +35,7 @@ def gen_participant_num(participants, N = 100):
     taken_nums = []
     for part_key in participants.keys():
         participant = participants[part_key]
-        taken_nums.append(participant['info']['number'])
+        taken_nums.append(int(participant['info']['number'][0]))
     n = 0
     num_found = False
     while not num_found:
