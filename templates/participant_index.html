@@ -9,13 +9,23 @@
     <script type="text/javascript" src="/static/bower_components/bootstrap-waitingfor/build/bootstrap-waitingfor.js"></script>
 
     <style>
-        .mat_grid > button {
+        .mat-button {
             display: block;
+            width: 100%;
+            height: 100%;
             text-decoration: none;
             text-align: center;
             align-items: stretch;
             border-radius: 0px;
             vertical-align: middle;
+        }
+
+        .col-md {
+            padding: 0px;
+            margin: 0px;
+        }
+        .row {
+            height: 10%;
         }
 
         .mat_submit > button {
@@ -29,10 +39,12 @@
         }
 
         .mat_grid {
-            display: grid;
+        /*
+            display: -ms-grid;
             align-content: center;
-            grid-template-columns: repeat(5, 1fr);
-            grid-template-rows: repeat(10, 1fr);
+            -ms-grid-template-columns: repeat(5, 1fr);
+            -ms-grid-template-rows: repeat(10, 1fr);
+        */
             height: calc(90% - 56px);
         }
 

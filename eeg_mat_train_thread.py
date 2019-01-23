@@ -51,7 +51,7 @@ class EEGMatTrainThread(BaseThread):
     '''
     def __init__(self, sessionFilepath=None,
                  stimFolder="./matrix_test/long_concat_stim/out/stim",
-                 noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
+                 noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise_norm.wav",
                  noiseRMSFilepath="./matrix_test/behavioural_stim/stimulus/rms/noise_rms.npy",
                  red_coef="./calibration/out/reduction_coefficients/mat_red_coef.npy",
                  cal_coef="./calibration/out/calibration_coefficients/mat_cal_coef.npy",
@@ -83,6 +83,7 @@ class EEGMatTrainThread(BaseThread):
         self.socketio.on_event('submit_eeg_response', self.submitTestResponse, namespace='/main')
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
 
+        # No longer working because of mix_wavs
         self.dev_mode = False
 
     def loadStimulus(self):
@@ -243,7 +244,7 @@ class EEGMatTrainThread(BaseThread):
         if not self.dev_mode:
             self.play_wav(wav_file, 'finish_test')
         else:
-            self.play_wav('./test.wav', 'finish_test')
+            self.play_wav('./da_stim/DA_170.wav', 'finish_test')
 
         self.socketio.emit("stim_done", namespace="/main")
 

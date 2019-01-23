@@ -10,8 +10,6 @@ from scipy.signal import square
 import sounddevice as sd
 import soundfile as sf
 
-
-
 def play_wav(wav_file, buffersize=20, blocksize=1024, socketio=None):
     q = queue.Queue(maxsize=buffersize)
     event = threading.Event()
@@ -130,7 +128,7 @@ def block_mix_wavs(wavpath_a, wavpath_b, out_wavpath, a_gain=1., b_gain=1., bloc
             y[:, 0] = x1[:, 0] + x2
             y[:, 1] = x1[:, 1] + x2
             y[:, 2] = x1[:, 2]
-        if mute_left:
+        elif mute_left:
             y[:, 0] = 0.0
         else:
             y = x1 + x2
