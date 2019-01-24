@@ -14,6 +14,13 @@ server_lock = Lock()
 
 logger = logging.getLogger(__name__)
 
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+log = logging.getLogger('engineio')
+log.setLevel(logging.ERROR)
+log = logging.getLogger('socketio')
+log.setLevel(logging.ERROR)
+
 
 def url_ok(url, port):
     # Use httplib on Python 2
