@@ -8,7 +8,7 @@
 			"architecture" : "x64"
 		}
 ,
-		"rect" : [ 0.0, 44.0, 1366.0, 678.0 ],
+		"rect" : [ 0.0, 45.0, 1280.0, 929.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 12.0,
@@ -32,13 +32,42 @@
 					"fontname" : "Arial",
 					"fontsize" : 12.0,
 					"frgb" : 0.0,
+					"id" : "obj-28",
+					"linecount" : 3,
+					"maxclass" : "comment",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 1069.0, 608.5, 150.0, 47.0 ],
+					"text" : "Stim generated with guaranteed no clipping at +5dB"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 12.0,
+					"frgb" : 0.0,
+					"id" : "obj-22",
+					"maxclass" : "comment",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 1069.0, 586.0, 185.0, 20.0 ],
+					"text" : "0.333, 1.23, 3.169231, 0.861538"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 12.0,
+					"frgb" : 0.0,
 					"id" : "obj-20",
 					"linecount" : 2,
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 1127.0, 559.0, 150.0, 33.0 ],
-					"text" : "RME Fireface Output:\n+4dB"
+					"patching_rect" : [ 1069.0, 553.0, 150.0, 33.0 ],
+					"text" : "RME Fireface Output:\n+1.7dB"
 				}
 
 			}
@@ -114,26 +143,12 @@
 					"fontname" : "Arial",
 					"fontsize" : 12.0,
 					"frgb" : 0.0,
-					"id" : "obj-17",
-					"maxclass" : "comment",
-					"numinlets" : 1,
-					"numoutlets" : 0,
-					"patching_rect" : [ 889.0, 694.0, 150.0, 20.0 ],
-					"text" : "0.06574271"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"fontname" : "Arial",
-					"fontsize" : 12.0,
-					"frgb" : 0.0,
 					"id" : "obj-18",
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
 					"patching_rect" : [ 408.0, 215.0, 81.75, 20.0 ],
-					"text" : "80 dB SPL"
+					"text" : "70 dB SPL"
 				}
 
 			}
@@ -160,7 +175,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "signal" ],
-					"patching_rect" : [ 663.0, 694.0, 32.5, 20.0 ],
+					"patching_rect" : [ 663.0, 681.0, 32.5, 20.0 ],
 					"text" : "*~"
 				}
 
@@ -285,7 +300,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "int" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 835.0, 597.0, 20.0, 20.0 ]
+					"patching_rect" : [ 740.25, 565.5, 20.0, 20.0 ]
 				}
 
 			}
@@ -298,7 +313,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "signal" ],
-					"patching_rect" : [ 729.0, 617.0, 32.5, 20.0 ],
+					"patching_rect" : [ 663.0, 613.0, 32.5, 20.0 ],
 					"text" : "*~"
 				}
 
@@ -312,7 +327,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "signal" ],
-					"patching_rect" : [ 680.0, 563.0, 75.0, 20.0 ],
+					"patching_rect" : [ 663.0, 565.5, 75.0, 20.0 ],
 					"text" : "cycle~ 1000"
 				}
 
@@ -953,8 +968,8 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 104.25, 780.0, 552.0, 20.0 ],
-					"text" : "loadmess append OSX:/Users/samuelperry/Work/SOTON/Initial_work/BPLabs/calibration/out/stimulus"
+					"patching_rect" : [ 104.25, 780.0, 509.0, 20.0 ],
+					"text" : "loadmess append OSX:/Users/sam/Work/SOTON/Initial_work/BPLabs/calibration/out/stimulus"
 				}
 
 			}
@@ -978,7 +993,7 @@
 					"maxclass" : "ezdac~",
 					"numinlets" : 2,
 					"numoutlets" : 0,
-					"patching_rect" : [ 511.25, 459.0, 45.0, 45.0 ]
+					"patching_rect" : [ 511.25, 476.0, 45.0, 45.0 ]
 				}
 
 			}
@@ -1130,6 +1145,7 @@
 					"destination" : [ "obj-6", 1 ],
 					"disabled" : 0,
 					"hidden" : 0,
+					"midpoints" : [ 672.5, 723.0, 579.625, 723.0, 579.625, 449.0, 546.75, 449.0 ],
 					"source" : [ "obj-16", 0 ]
 				}
 
@@ -1139,6 +1155,7 @@
 					"destination" : [ "obj-6", 0 ],
 					"disabled" : 0,
 					"hidden" : 0,
+					"midpoints" : [ 672.5, 723.0, 570.625, 723.0, 570.625, 449.0, 520.75, 449.0 ],
 					"source" : [ "obj-16", 0 ]
 				}
 
@@ -1345,7 +1362,7 @@
 					"destination" : [ "obj-88", 0 ],
 					"disabled" : 0,
 					"hidden" : 0,
-					"midpoints" : [ 389.75, 351.0, 349.0, 351.0, 349.0, 495.0, 389.75, 495.0 ],
+					"midpoints" : [ 389.75, 360.0, 349.0, 360.0, 349.0, 495.0, 389.75, 495.0 ],
 					"source" : [ "obj-56", 0 ]
 				}
 
@@ -1440,7 +1457,7 @@
 					"destination" : [ "obj-89", 0 ],
 					"disabled" : 0,
 					"hidden" : 0,
-					"midpoints" : [ 645.5, 351.0, 602.0, 351.0, 602.0, 495.0, 645.5, 495.0 ],
+					"midpoints" : [ 645.5, 358.0, 602.0, 358.0, 602.0, 495.0, 645.5, 495.0 ],
 					"source" : [ "obj-62", 0 ]
 				}
 
@@ -1535,7 +1552,7 @@
 					"destination" : [ "obj-90", 0 ],
 					"disabled" : 0,
 					"hidden" : 0,
-					"midpoints" : [ 898.5, 351.0, 850.0, 351.0, 850.0, 495.0, 898.5, 495.0 ],
+					"midpoints" : [ 898.5, 359.0, 850.0, 359.0, 850.0, 495.0, 898.5, 495.0 ],
 					"source" : [ "obj-68", 0 ]
 				}
 

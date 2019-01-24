@@ -65,7 +65,7 @@ class EEGStoryTrainThread(BaseThread):
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
         self.loadStimulus()
 
-        self.dev_mode = False
+        self.dev_mode = True
 
     def setQuestion(self, q):
         self.socketio.emit('set_question', data=q[0], namespace='/main')
@@ -93,6 +93,7 @@ class EEGStoryTrainThread(BaseThread):
             self.processResponse()
             self.trial_ind += 1
         self.saveState(out=self.backupFilepath)
+        self.finaliseResults()
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
             self.socketio.emit('processing-complete', namespace='/main')
@@ -148,7 +149,7 @@ class EEGStoryTrainThread(BaseThread):
         if not self.dev_mode:
             self.play_wav(wav_file, 'finish_test')
         else:
-            self.play_wav('./test.wav', 'finish_test')
+            self.play_wav('./da_stim/DA_170.wav', 'finish_test')
 
         self.socketio.emit("stim_done", namespace="/main")
 

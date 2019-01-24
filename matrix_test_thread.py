@@ -131,11 +131,17 @@ class MatTestThread(BaseThread):
         self.loadNoise(noiseFilepath, noiseRMSFilepath)
 
 
+    def displayInstructions(self):
+        self.socketio.emit('display_instructions', namespace='/main')
+
     def testLoop(self):
         '''
         Main loop for iteratively finding the SRT
         '''
         self.waitForPageLoad()
+
+        self.displayInstructions()
+        self.waitForPartReady()
         while not self.finishTest and not self._stopevent.isSet() and len(self.availableSentenceInds):
             self.plotSNR()
             self.y = self.generateTrial(self.snr)
@@ -386,22 +392,22 @@ class MatTestThread(BaseThread):
     def generateTrial(self, snr):
         currentSentenceInd = self.availableSentenceInds.pop(0)
         # Convert desired SNR to dB FS
-        snr_fs = 10**(snr/20)
+        snr_fs = 10**(snr/20.)
         # Get speech data
         x = self.lists[0][currentSentenceInd]
         x_rms = self.listsRMS[0][currentSentenceInd]
         self.currentWords = self.listsString[0][currentSentenceInd]
         # Get noise data
-        noiseLen = x.size + self.fs
+        noiseLen = x.size + self.fs*2.5
         start = random.randint(0, self.noise.frames()-noiseLen)
         end = start + noiseLen
         self.noise.seek(start)
         x_noise = self.noise.read_frames(end-start)
-        # Scale speech to match the RMS of the noise
-        x = x*(self.noise_rms/x_rms)
+        # Scale noise to match the RMS of the speech
+        x_noise *= x_rms/self.noise_rms
         y = x_noise
         # Set speech to start 500ms after the noise, scaled to the desired SNR
-        sigStart = round(self.fs/2.)
+        sigStart = random.randint(self.fs, round(2*self.fs))
         y[sigStart:sigStart+x.size] += x*snr_fs
         y *= self.reduction_coef
         return y

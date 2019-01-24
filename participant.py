@@ -73,7 +73,10 @@ class Participant:
                 "notes": ''
             },
 
-            "eeg_train": {
+            "eeg_story_train": {
+                "notes": ''
+            },
+            "eeg_mat_train": {
                 "notes": ''
             },
 

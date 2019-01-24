@@ -59,8 +59,8 @@ class DaTestThread(BaseThread):
         self.nTrials = nTrials
         self.trial_ind = 0
         self._stopevent = Event()
-        # (Completely clean stimulus added by default later)
-        self.si = np.array([19.0, 50.0, 81.0, 90.0])
+        # (Completely clean stimulus and stimulus at +10dB added by default later)
+        self.si = np.array([19.0, 50.0, 81.0])
 
         super(DaTestThread, self).__init__(self.test_name,
                                            sessionFilepath=sessionFilepath,
@@ -133,7 +133,9 @@ class DaTestThread(BaseThread):
         x = logit(self.si * 0.01)
         snrs = (x/(4*s_50))+srt_50
         snrs = np.append(snrs, np.inf)
+        snrs = np.append(snrs, 10.0)
         self.si = np.append(self.si, np.inf)
+        self.si = np.append(self.si, (10.0*(4*s_50))-srt_50)
 
         self.snr_fs = 10**(-snrs/20)
         self.snr_fs[self.snr_fs == np.inf] = 0.

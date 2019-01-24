@@ -1,6 +1,19 @@
 {% extends 'participant_index.html' %}
 {% block content %}
 <div id="main-div" class="outer">
+    <div id="instructions">
+        <div class="card">
+            <div class="card-body">
+                <h2>Instructions</h2>
+                <p>
+                In this test, you will be presented with repeated "da"
+                utterances. Simply listen to the stimulus, you do not need to
+                respond.
+                </p>
+                <button type="button" href="#" id="instr_continue" class="Btn Btn-primary">Continue</button>
+            </div>
+        </div>
+    </div>
     <div class="container-fluid mat_grid">
         <div class="row">
             <div class="col-md">
@@ -185,11 +198,15 @@
     <div class="mat_submit">
         <button type="button" href="#" disabled id="mat-submit" class="Btn Btn-primary">Submit</button>
     </div>
+
     <script>
 
     $(document).ready(function(){
         // Initialise socketio with a namespace called "main"
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
+        var part_ready = false;
+        loading = false;
+        waitingDialog.show('Loading... Please wait');
 
         var choice = Array(5).fill('');
         $('.mat-button').click(function(event) {
@@ -216,10 +233,37 @@
             }
         });
 
+        function displayInstructions() {
+            $("#instructions").css("display", "table-cell");
+            $("#instructions").fadeIn();
+            waitingDialog.hide();
+        }
+
+        function hideInstructions() {
+            $("#instructions").css("display", "none");
+            $("#instructions").fadeOut();
+            if(loading) {
+                waitingDialog.show('Loading... Please wait');
+            }
+        }
+
+
+        $('#instr_continue').click(function(event) {
+            hideInstructions();
+            part_ready = true;
+            socket.emit("part_ready")
+            on()
+        });
+
+        socket.on('display_instructions', function(msg) {
+            displayInstructions();
+        });
+
         socket.on('stim_playing', function(msg) {
             // Disable all inputs whilst processing
             $('#main-div').find('input, textarea, button, select').attr('disabled','disabled');
         });
+
         socket.on('question', function(msg) {
             // Disable all inputs whilst processing
             $('#question').text(msg);

@@ -128,8 +128,8 @@ def block_mix_wavs(wavpath_a, wavpath_b, out_wavpath, a_gain=1., b_gain=1., bloc
             y[:, 0] = x1[:, 0] + x2
             y[:, 1] = x1[:, 1] + x2
             y[:, 2] = x1[:, 2]
-        elif mute_left:
-            y[:, 0] = 0.0
+            if mute_left:
+                y[:, 0] = 0.0
         else:
             y = x1 + x2
         out_wav.write_frames(y)

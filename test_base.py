@@ -4,6 +4,7 @@ import os
 import sounddevice as sd
 import dill
 
+from shutil import copy2
 from threading import Thread, Event
 from config import socketio
 

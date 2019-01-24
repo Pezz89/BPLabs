@@ -164,6 +164,7 @@ class EEGMatTrainThread(BaseThread):
         )
         # For each stimulus
         trials = list(zip(self.stim_paths, self.question))[self.trial_ind:]
+        set_trace()
         for (wav, q) in trials:
             self.displayInstructions()
             self.waitForPartReady()
@@ -173,6 +174,7 @@ class EEGMatTrainThread(BaseThread):
             self.playStimulus(wav)
             self.setMatrix(q)
         self.saveState(out=self.backupFilepath)
+        self.finaliseResults()
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
             self.socketio.emit('processing-complete', namespace='/main')
@@ -225,10 +227,10 @@ class EEGMatTrainThread(BaseThread):
                   'response', 'backupFilepath', 'noise_path', 'question_files',
                   'si', 'question', 'answers', 'trial_ind']
         saveDict = {k:self.__dict__[k] for k in toSave}
-        self.participant['eeg_test'].update(saveDict)
-        self.participant.save("eeg_test")
+        self.participant['eeg_mat_train'].update(saveDict)
+        self.participant.save("eeg_mat_train")
 
-        backup_path = os.path.join(self.participant.data_paths['eeg_test'],
+        backup_path = os.path.join(self.participant.data_paths['eeg_mat_train'],
                         'finalised_backup.pkl')
         copy2(self.backupFilepath, backup_path)
         self.finalised = True
@@ -256,10 +258,10 @@ class EEGMatTrainThread(BaseThread):
         self.newResp = True
 
 
-    def saveState(self, out="eeg_test_state.pkl"):
+    def saveState(self, out="eeg_mat_train_state.pkl"):
         toSave = ['marker_files', 'wav_files', 'participant', 'response',
                   'backupFilepath', 'noise_path', 'question_files', 'si',
-                  'question', 'answers', 'trial_ind']
+                  'question', 'stim_paths', 'answers', 'trial_ind']
         saveDict = {k:self.__dict__[k] for k in toSave}
         with open(out, 'wb') as f:
             dill.dump(saveDict, f)

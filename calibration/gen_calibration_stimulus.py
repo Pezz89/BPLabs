@@ -22,7 +22,7 @@ def calc_potential_max(wavs, noise_filepath, out_dir, out_name):
     noise_rms = np.sqrt(np.mean(x**2))
     max_noise_samp = max(np.abs(x))
 
-    snr = -15.
+    snr = 5.
     snr_fs = 10**(-snr/20)
     max_noise_samp *= max_wav_rms/noise_rms
     max_sampl = max_wav_samp+(max_noise_samp*snr_fs)
@@ -48,8 +48,7 @@ def main():
     dir_must_exist(out_dir)
     dir_must_exist(out_red_dir)
     dir_must_exist(out_stim_dir)
-    import pdb
-    pdb.set_trace()
+
     story_coef = calc_potential_max(story_wavs, noise_file, out_red_dir, "story_red_coef")
     mat_coef = calc_potential_max(mat_wavs, noise_file, out_red_dir, "mat_red_coef")
     da_coef = calc_potential_max(da_files, da_noise_file, out_red_dir, "da_red_coef")
