@@ -94,6 +94,10 @@ class MatTestThread(BaseThread):
 
         self.availableSentenceInds = []
 
+        # Plotting parameters
+        self.img = io.BytesIO()
+        self.img.seek(0)
+        self.img.truncate(0)
 
         super(MatTestThread, self).__init__('mat_test',
                                             sessionFilepath=sessionFilepath,
@@ -159,7 +163,7 @@ class MatTestThread(BaseThread):
             self.socketio.emit('processing-complete', {'data': ''}, namespace='/main')
             self.waitForPageLoad()
             # Plot SNR of current trial to the clinician screen
-            plot_url = self.adaptiveTrack.plotSNR()
+            plot_url = self.adaptiveTrack.plotSNR(self.wordsCorrect)
             self.socketio.emit("mat_plot_ready", {'data': plot_url}, namespace="/main")
             self.fitLogistic()
             self.waitForFinalise()
@@ -223,7 +227,7 @@ class MatTestThread(BaseThread):
         '''
         '''
         self.wordsCorrect = self.wordsCorrect[:self.trialN].astype(float)
-        self.trackSNR = self.snrTrack[:self.trialN]
+        self.trackSNR = self.adaptiveTrack.snrTrack[:self.trialN]
         res = minimize(self.logisticFuncLiklihood, np.array([np.mean(self.trackSNR),1.0]))
         percent_correct = (np.sum(self.wordsCorrect, axis=1)/self.wordsCorrect.shape[1])*100.
         sortedSNRind = np.argsort(-self.trackSNR)
