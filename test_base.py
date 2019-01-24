@@ -177,7 +177,7 @@ class BaseThread(Thread):
         if not self.dev_mode:
             play_wav(wav_file)
         else:
-            play_wav('./test.wav')
+            play_wav('./da_stim/DA_170.wav')
 
         self.socketio.emit("{}_stim_done".format(test_name), namespace="/main")
 
@@ -189,7 +189,10 @@ class BaseThread(Thread):
         self.newResp = False
         self.socketio.emit("stim_playing", namespace="/main")
         # Play audio
-        sd.play(y, fs, blocking=True)
+        if not self.dev_mode:
+            sd.play(y, fs, blocking=True)
+        else:
+            self.play_wav('./da_stim/DA_170.wav', '')
         self.socketio.emit("stim_done", namespace="/main")
 
 
