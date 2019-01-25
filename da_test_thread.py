@@ -124,7 +124,7 @@ class DaTestThread(BaseThread):
         snrs = np.append(snrs, np.inf)
         snrs = np.append(snrs, 10.0)
         self.si = np.append(self.si, np.inf)
-        self.si = np.append(self.si, (10.0*(4*s_50))-srt_50)
+        self.si = np.append(self.si, 10.0)
 
         self.snr_fs = 10**(-snrs/20)
         self.snr_fs[self.snr_fs == np.inf] = 0.
