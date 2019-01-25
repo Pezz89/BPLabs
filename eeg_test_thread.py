@@ -52,6 +52,7 @@ class EEGTestThread(BaseThread):
                  red_coef="./calibration/out/reduction_coefficients/mat_red_coef.npy",
                  cal_coef="./calibration/out/calibration_coefficients/da_cal_coef.npy",
                  socketio=None, participant=None, srt_50=None, s_50=None):
+        self.test_name = 'eeg_test'
         self.noise_path = noiseFilepath
         self.listDir = listFolder
 
@@ -77,6 +78,8 @@ class EEGTestThread(BaseThread):
         self.socketio.on_event('submit_eeg_response', self.submitTestResponse, namespace='/main')
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
 
+        self.dev_mode = False
+
 
     def testLoop(self):
         '''
@@ -92,12 +95,13 @@ class EEGTestThread(BaseThread):
         # For each stimulus
         trials = list(zip(self.wav_files, self.question))[self.trial_ind:]
         for (wav, q) in trials:
+            self.saveState(out=self.backupFilepath)
             self.displayInstructions()
             self.waitForPartReady()
             if self._stopevent.isSet() or self.finishTest:
                 break
             # Play concatenated matrix sentences at set SNR
-            self.playStimulus(wav)
+            self.playStimulusWav(wav)
             self.setMatrix(q)
         self.saveState(out=self.backupFilepath)
         if not self._stopevent.isSet():
@@ -105,6 +109,7 @@ class EEGTestThread(BaseThread):
             self.socketio.emit('processing-complete', namespace='/main')
             self.waitForPageLoad()
             self.fillTable()
+            self.waitForFinalise()
 
     def displayInstructions(self):
         self.socketio.emit(
@@ -117,7 +122,7 @@ class EEGTestThread(BaseThread):
         '''
         '''
         symb = [[symb_dict[x], symb_dict[y]] for x, y in self.answers if not np.isnan([x, y]).any()]
-        self.socketio.emit('test_fill_table', {'data': symb}, namespace='/main')
+        self.socketio.emit('eeg_test_fill_table', {'data': symb}, namespace='/main')
 
 
     def setMatrix(self, questions):
@@ -167,21 +172,6 @@ class EEGTestThread(BaseThread):
         s_50
         '''
         return 1./(1.+np.exp(4.*s_50*(L_50-L)))
-
-
-    def playStimulus(self, wav_file, replay=False):
-        self.newResp = False
-        self.socketio.emit("stim_playing", namespace="/main")
-        # if not replay:
-        #     self.y = self.generateTrial(self.snr)
-        # Play audio
-        # sd.play(self.y, self.fs, blocking=True)
-        if not self.dev_mode:
-            self.play_wav(wav_file, 'finish_test')
-        else:
-            self.play_wav('./test.wav', 'finish_test')
-
-        self.socketio.emit("stim_done", namespace="/main")
 
 
     def loadStimulus(self):

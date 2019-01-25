@@ -80,6 +80,7 @@ class EEGStoryTrainThread(BaseThread):
         # For each stimulus
         trials = list(zip(self.wav_files, self.question))[self.trial_ind:]
         for (wav, q) in trials:
+            self.saveState(out=self.backupFilepath)
             self.displayInstructions()
             self.setQuestion(q)
             self.waitForPartReady()
@@ -93,12 +94,12 @@ class EEGStoryTrainThread(BaseThread):
             self.processResponse()
             self.trial_ind += 1
         self.saveState(out=self.backupFilepath)
-        self.finaliseResults()
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
             self.socketio.emit('processing-complete', namespace='/main')
             self.waitForPageLoad()
             self.fillTable()
+            self.waitForFinalise()
 
     def submitTestResponse(self, msg):
         '''
