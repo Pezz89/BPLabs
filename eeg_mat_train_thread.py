@@ -164,8 +164,8 @@ class EEGMatTrainThread(BaseThread):
         )
         # For each stimulus
         trials = list(zip(self.stim_paths, self.question))[self.trial_ind:]
-        set_trace()
         for (wav, q) in trials:
+            self.saveState(out=self.backupFilepath)
             self.displayInstructions()
             self.waitForPartReady()
             if self._stopevent.isSet() or self.finishTest:
@@ -174,12 +174,12 @@ class EEGMatTrainThread(BaseThread):
             self.playStimulus(wav)
             self.setMatrix(q)
         self.saveState(out=self.backupFilepath)
-        self.finaliseResults()
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
             self.socketio.emit('processing-complete', namespace='/main')
             self.waitForPageLoad()
             self.fillTable()
+            self.waitForFinalise()
 
     def displayInstructions(self):
         self.socketio.emit(
@@ -192,7 +192,7 @@ class EEGMatTrainThread(BaseThread):
         '''
         '''
         symb = [[symb_dict[x], symb_dict[y]] for x, y in self.answers if not np.isnan([x, y]).any()]
-        self.socketio.emit('test_fill_table', {'data': symb}, namespace='/main')
+        self.socketio.emit('eeg_test_fill_table', {'data': symb}, namespace='/main')
 
 
     def setMatrix(self, questions):

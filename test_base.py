@@ -153,9 +153,6 @@ class BaseThread(Thread):
         Wait for results to be finalised by socketio handler
         '''
         while not self.finalised and not self._stopevent.isSet() and not self.finishTest:
-            print("self.finalised {}".format(self.finalised))
-            print("self.finishTest {}".format(self.finishTest))
-            print("self._stopevent {}".format(self._stopevent))
             self._stopevent.wait(0.2)
         self.socketio.emit("test_finished", namespace='/main')
         return
@@ -262,7 +259,6 @@ class BaseThread(Thread):
         previously generated pickle file
         '''
         filepath = msg['data']
-        set_trace()
         self.loadState(filepath)
 
 

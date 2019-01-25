@@ -67,7 +67,7 @@ class DaTestThread(BaseThread):
                                            socketio=socketio,
                                            participant=participant)
 
-        self.toSave = ['trial_ind', 'nTrials', 'wav_file', 'test_name', 'si']
+        self.toSave = ['stim_paths', 'trial_ind', 'nTrials', 'wav_file', 'test_name', 'si']
 
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
 
@@ -80,37 +80,26 @@ class DaTestThread(BaseThread):
         '''
         self.waitForPageLoad()
         self.socketio.emit('test_ready', namespace='/main')
+        set_trace()
         for wav in self.stim_paths[self.trial_ind:]:
+            self.saveState(out=self.backupFilepath)
             self.displayInstructions()
             self.waitForPartReady()
             if self._stopevent.isSet() or self.finishTest:
                 break
             # Play concatenated matrix sentences at set SNR
-            self.playStimulus(wav)
+            self.playStimulusWav(wav)
+            self.trial_ind += 1
         self.saveState(out=self.backupFilepath)
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
             self.socketio.emit('processing-complete', namespace='/main')
             self.waitForPageLoad()
+            self.waitForFinalise()
 
 
     def displayInstructions(self):
         self.socketio.emit('display_instructions', namespace='/main')
-
-
-    def playStimulus(self, wav_file, replay=False):
-        self.newResp = False
-        self.socketio.emit("stim_playing", namespace="/main")
-        # if not replay:
-        #     self.y = self.generateTrial(self.snr)
-        # Play audio
-        # sd.play(self.y, self.fs, blocking=True)
-        if not self.dev_mode:
-            self.play_wav(wav_file, 'finish_test')
-        else:
-            self.play_wav('./test.wav', 'finish_test')
-
-        self.socketio.emit("stim_done", namespace="/main")
 
 
     def loadStimulus(self):

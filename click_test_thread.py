@@ -66,16 +66,18 @@ class ClickTestThread(BaseThread):
         self.waitForPageLoad()
         self.socketio.emit('test_ready', namespace='/main')
         for self.trial_ind in range(self.trial_ind, self.nTrials):
+            self.saveState(out=self.backupFilepath)
             self.displayInstructions()
             self.waitForPartReady()
             if self._stopevent.isSet() or self.finishTest:
                 break
             # Play concatenated matrix sentences at set SNR
             self.playStimulusWav(self.wav_file)
-            self.saveState(out=self.backupFilepath)
+        self.saveState(out=self.backupFilepath)
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
             self.socketio.emit('processing-complete', namespace='/main')
+            self.waitForPageLoad()
             self.waitForFinalise()
 
 
