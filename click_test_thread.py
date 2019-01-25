@@ -65,43 +65,28 @@ class ClickTestThread(BaseThread):
         '''
         self.waitForPageLoad()
         self.socketio.emit('test_ready', namespace='/main')
-        for self.trial_ind in range(self.nTrials):
+        for self.trial_ind in range(self.trial_ind, self.nTrials):
             self.displayInstructions()
             self.waitForPartReady()
             if self._stopevent.isSet() or self.finishTest:
                 break
             # Play concatenated matrix sentences at set SNR
-            self.playStimulus(self.wav_file)
+            self.playStimulusWav(self.wav_file)
             self.saveState(out=self.backupFilepath)
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
             self.socketio.emit('processing-complete', namespace='/main')
+            self.waitForFinalise()
 
 
     def displayInstructions(self):
         self.socketio.emit('display_instructions', namespace='/main')
 
 
-    def playStimulus(self, wav_file, replay=False):
-        self.newResp = False
-        self.socketio.emit("stim_playing", namespace="/main")
-        # if not replay:
-        #     self.y = self.generateTrial(self.snr)
-        # Play audio
-        # sd.play(self.y, self.fs, blocking=True)
-        if not self.dev_mode:
-            self.play_wav(wav_file, 'finish_test')
-        else:
-            self.play_wav('./test.wav', 'finish_test')
-
-        self.socketio.emit("stim_done", namespace="/main")
-
-
     def loadStimulus(self):
         '''
         '''
-        #audio, fs, enc, fmt = sndio.read(wav, return_format=True)
-
+        pass
 
     def saveState(self, out="test_state.pkl"):
         saveDict = {k:self.__dict__[k] for k in self.toSave}

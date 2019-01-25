@@ -64,14 +64,22 @@
             </tbody>
         </table>
     </div>
+    <div class="d-flex justify-content-center mt-2" role="group">
+        <button type="button" id="mat-save" class="btn btn-primary mx-3">Save and finish test</button>
+    </div>
 </div>
 <script>
     $(document).ready(function(){
         // Initialise socketio with a namespace called "main"
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/main');
         socket.on('test_resp', function(msg) {
-            console.log("Yup");
             $(`#Q1 > .T${parseInt(msg['trial_ind'])+1} > button`).attr("data-original-title", msg['ans']).tooltip('show');
+        });
+        $('#mat-save').click(function(event) {
+            socket.emit("finalise_results")
+        });
+        socket.on('test_finished', function(msg) {
+            window.location.href = '/home';
         });
     });
 </script>

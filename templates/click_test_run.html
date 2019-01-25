@@ -62,11 +62,11 @@
             waitingDialog.hide();
         });
 
-        socket.on('stim_playing', function(msg) {
+        socket.on('click_test_stim_playing', function(msg) {
             on()
         });
 
-        socket.on('stim_done', function(msg) {
+        socket.on('click_test_stim_done', function(msg) {
             off()
         });
 

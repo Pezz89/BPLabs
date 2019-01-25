@@ -32,6 +32,8 @@ $(document).ready(function(){
     $('#mat-save').click(function(event) {
         socket.emit("finalise_results")
         finalised=1;
+    });
+    socket.on('test_finished', function(msg) {
         window.location.href = '/home';
     });
 

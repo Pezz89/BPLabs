@@ -78,7 +78,7 @@ class BaseThread(Thread):
         self.dev_mode = False
 
 
-    def play_wav(self, wav_file, stop_string):
+    def play_wav(self, wav_file, stop_string='stop_audio'):
         self.wavThread = WavPlayer(wav_file, socketio=socketio, stop_string=stop_string)
         self.wavThread.run()
 
@@ -153,8 +153,11 @@ class BaseThread(Thread):
         Wait for results to be finalised by socketio handler
         '''
         while not self.finalised and not self._stopevent.isSet() and not self.finishTest:
-            print(self.finishTest)
+            print("self.finalised {}".format(self.finalised))
+            print("self.finishTest {}".format(self.finishTest))
+            print("self._stopevent {}".format(self._stopevent))
             self._stopevent.wait(0.2)
+        self.socketio.emit("test_finished", namespace='/main')
         return
 
 
@@ -175,11 +178,11 @@ class BaseThread(Thread):
         self.newResp = False
         self.socketio.emit("{}_stim_playing".format(self.test_name), namespace="/main")
         if not self.dev_mode:
-            play_wav(wav_file)
+            self.play_wav(wav_file)
         else:
-            play_wav('./da_stim/DA_170.wav')
+            self.play_wav('./da_stim/DA_170.wav')
 
-        self.socketio.emit("{}_stim_done".format(test_name), namespace="/main")
+        self.socketio.emit("{}_stim_done".format(self.test_name), namespace="/main")
 
 
     def playStimulus(self, y, fs):
@@ -231,8 +234,6 @@ class BaseThread(Thread):
             self.clinPageLoaded = True
         else:
             self.partPageLoaded = True
-        print("PART: {}".format(self.partPageLoaded))
-        print("CLIN: {}".format(self.clinPageLoaded))
         self.pageLoaded = self.clinPageLoaded and self.partPageLoaded
 
 
@@ -261,6 +262,7 @@ class BaseThread(Thread):
         previously generated pickle file
         '''
         filepath = msg['data']
+        set_trace()
         self.loadState(filepath)
 
 

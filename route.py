@@ -262,3 +262,14 @@ Calibration routing
 @server.route('/calibrate')
 def calibrate():
     return render_template("calibrate.html")
+
+'''
+Basic audiology test routing
+'''
+@server.route('/pta_test')
+def pta():
+    return render_template("pta.html")
+
+@server.route('/tympanometry')
+def typms():
+    return render_template("tympanometry.html")

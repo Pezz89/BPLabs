@@ -92,7 +92,7 @@ class MatTestThread(BaseThread):
         self.srt_50 = None
         self.s_50 = None
 
-        self.wordsCorrect = np.full((90, 5), False, dtype=bool)
+        self.wordsCorrect = np.full((180, 5), False, dtype=bool)
         self.trialN = 0
 
         self.availableSentenceInds = []
@@ -111,13 +111,14 @@ class MatTestThread(BaseThread):
                        'wordsCorrect', 'trialN', 'test_name', 'backupFilepath',
                        'currentWords', 'nCorrect', 'availableSentenceInds',
                        'lists', 'listsRMS', 'listsString']
-        self.toFinalise = ['snrTrack', 'trackOrder', 'trialN', 'wordsCorrect',
+        self.toFinalise = ['trackSNR', 'trackOrder', 'trialN', 'wordsCorrect',
                            'presentedWords', 'responses', 'srt_50', 's_50']
 
         # Attach messages from gui to class methods
         self.socketio.on_event('submit_response', self.submitMatResponse, namespace='/main')
         self.socketio.on_event('page_loaded', self.setPageLoaded, namespace='/main')
         self.socketio.on_event('repeat_stimulus', self.playStimulusSocketHandle, namespace='/main')
+        self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
 
         self.loadNoise(noiseFilepath, noiseRMSFilepath)
 
@@ -132,7 +133,7 @@ class MatTestThread(BaseThread):
         dpi = 300
 
         maxTrialN = np.max([x.trialN for x in self.adaptiveTracks])
-        plt.xlim([-1, maxTrialN])
+        plt.xlim([-1, maxTrialN+1])
         plt.savefig(self.img, format='png', figsize=(800/dpi, 800/dpi), dpi=dpi)
         self.img.seek(0)
         plot_url = base64.b64encode(self.img.getvalue()).decode()
@@ -148,7 +149,7 @@ class MatTestThread(BaseThread):
 
         self.displayInstructions()
         self.waitForPartReady()
-        while not self.finishTest and not self._stopevent.isSet() and len(self.availableSentenceInds):
+        while not self.finishTest and not self._stopevent.isSet() and len(self.availableSentenceInds) and len(self.trackOrder):
             # Plot SNR of current trial to the clinician screen
             for at in self.adaptiveTracks:
                 at.plotSNR()
@@ -176,6 +177,7 @@ class MatTestThread(BaseThread):
             self.checkSentencesAvailable()
             self.saveState(out=self.backupFilepath)
             self.trialN += 1
+            self.adaptiveTracks[self.adTrInd].incrementTrialN()
         self.saveState(out=self.backupFilepath)
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
@@ -187,21 +189,6 @@ class MatTestThread(BaseThread):
             self.renderSNRPlot()
             self.fitLogistic()
             self.waitForFinalise()
-
-
-    def finaliseResults(self):
-        saveDict = {k:self.__dict__[k] for k in self.toFinalise}
-        if self.participant:
-            self.participant[self.test_name].update(saveDict)
-            self.participant.save(self.test_name)
-            backup_path = os.path.join(self.participant.data_paths[self.test_name],
-                         'finalised_backup.pkl')
-            copy2(self.backupFilepath, backup_path)
-        else:
-            copy2(self.backupFilepath, './finalised_backup.pkl')
-            with open('./{}_results.pkl'.format(self.test_name), 'wb') as f:
-                dill.dump(saveDict, f)
-        self.finalised = True
 
 
 
@@ -246,9 +233,8 @@ class MatTestThread(BaseThread):
     def fitLogistic(self):
         '''
         '''
-        self.wordsCorrect = [x.getWordsCorrect() for x in self.adaptiveTracks]
-        self.trackSNR = [x.getSNRTrack() for x in self.adaptiveTracks]
-        set_trace()
+        self.wordsCorrect = np.concatenate([x.getWordsCorrect() for x in self.adaptiveTracks])
+        self.trackSNR = np.concatenate([x.getSNRTrack() for x in self.adaptiveTracks])
         res = minimize(self.logisticFuncLiklihood, np.array([np.mean(self.trackSNR),1.0]))
         percent_correct = (np.sum(self.wordsCorrect, axis=1)/self.wordsCorrect.shape[1])*100.
         sortedSNRind = np.argsort(-self.trackSNR)
@@ -412,6 +398,21 @@ class MatTestThread(BaseThread):
         with open(out, 'wb') as f:
             dill.dump(saveDict, f)
 
+
+    def finaliseResults(self):
+        saveDict = {k:self.__dict__[k] for k in self.toFinalise}
+        saveDict['adaptiveTracks'] = []
+        for ind, _ in enumerate(self.adaptiveTracks):
+            atDict = self.adaptiveTracks[ind].createSaveDict()
+            saveDict['adaptiveTracks'].append(atDict)
+        self.participant[self.test_name].update(saveDict)
+        self.participant.save(self.test_name)
+        backup_path = os.path.join(self.participant.data_paths[self.test_name],
+                        'finalised_backup.pkl')
+        copy2(self.backupFilepath, backup_path)
+        set_trace()
+        self.finalised = True
+
 class AdaptiveTrack():
     '''
     '''
@@ -421,13 +422,13 @@ class AdaptiveTrack():
         self.snr = 0.0
         self.direction = 0
         # Record SNRs presented with each trial of the adaptive track
-        self.snrTrack = np.empty(90)
+        self.snrTrack = np.empty(180)
         self.snrTrack[:] = np.nan
         self.snrTrack[0] = 0.0
         # Count number of presented trials
         self.trialN = 0
         self.reduction_coef = np.load(red_coef)*np.load(cal_coef)
-        self.wordsCorrect = np.full((90, 5), False, dtype=bool)
+        self.wordsCorrect = np.full((180, 5), False, dtype=bool)
 
         # Adaptive track parameters
         self.slope = 0.15
@@ -453,6 +454,9 @@ class AdaptiveTrack():
 
     def processResponse(resp):
         pass
+
+    def incrementTrialN(self):
+        self.trialN += 1
 
 
     def generateTrial(self, x, x_rms):
@@ -489,16 +493,14 @@ class AdaptiveTrack():
                     self.i += 1
                 self.direction = currentDirection
         self.snrTrack[self.trialN] = self.snr
-        self.trialN += 1
-        print("Track {0} trial N: {1}".format(self.target, self.trialN))
 
 
     def plotSNR(self):
         '''
         '''
         plt.plot(self.snrTrack, 'o-')
-        plt.ylim([20.0, -20.0])
-        plt.xticks(np.arange(90))
+        plt.ylim([20.0, -30.0])
+        plt.xticks(np.arange(180))
         plt.xlabel("Trial N")
         plt.ylabel("SNR (dB)")
         plt.title("Adaptive track")
