@@ -71,7 +71,7 @@ class EEGMatTrainThread(BaseThread):
 
         # Percent speech inteligibility (estimated using behavioural measure)
         # to present stimuli at
-        self.si = np.array([20.0, 50.0, 90.0, 100.0])
+        self.si = np.array([])
         self.trial_ind = 0
         self._stopevent = Event()
 
@@ -106,6 +106,9 @@ class EEGMatTrainThread(BaseThread):
         x = logit(self.si * 0.01)
         snrs = (x/(4*s_50))+srt_50
         self.snr_fs = 10**(-snrs/20)
+        self.snr_fs = np.append(self.snr_fs, np.inf)
+        self.si = np.append(self.si, np.inf)
+        snrs = np.append(snrs, np.inf)
         self.snr_fs[self.snr_fs == np.inf] = 0.
         if (self.snr_fs == -np.inf).any():
             raise ValueError("Noise infinitely louder than signal for an SNR (SNRs: {})".format(self.snr_fs))

@@ -80,7 +80,6 @@ class DaTestThread(BaseThread):
         '''
         self.waitForPageLoad()
         self.socketio.emit('test_ready', namespace='/main')
-        set_trace()
         for wav in self.stim_paths[self.trial_ind:]:
             self.saveState(out=self.backupFilepath)
             self.displayInstructions()

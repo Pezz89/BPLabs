@@ -65,7 +65,7 @@ class EEGStoryTrainThread(BaseThread):
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
         self.loadStimulus()
 
-        self.dev_mode = True
+        self.dev_mode = False
 
     def setQuestion(self, q):
         self.socketio.emit('set_question', data=q[0], namespace='/main')
