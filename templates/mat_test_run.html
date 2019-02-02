@@ -11,6 +11,8 @@
                 each column. If you can't hear a word, take a guess. When you
                 have made your selection, press submit to continue to the next
                 sentence.</p>
+                <img src="/static/matrix_screen.png" class="center_matrix">
+                <br>
                 <button type="button" href="#" id="instr_continue" class="Btn Btn-primary">Continue</button>
             </div>
         </div>
@@ -253,7 +255,6 @@
             hideInstructions();
             part_ready = true;
             socket.emit("part_ready")
-            on()
         });
 
         socket.on('display_instructions', function(msg) {

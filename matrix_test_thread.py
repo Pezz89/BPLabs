@@ -410,7 +410,6 @@ class MatTestThread(BaseThread):
         backup_path = os.path.join(self.participant.data_paths[self.test_name],
                         'finalised_backup.pkl')
         copy2(self.backupFilepath, backup_path)
-        set_trace()
         self.finalised = True
 
 class AdaptiveTrack():

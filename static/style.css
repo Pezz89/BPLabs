@@ -42,15 +42,17 @@
     bottom: 0;
     background-color: white; /* Black background with opacity */
     z-index: 14; /* Specify a stack order in case you're using a different order for other elements */
+    font-size: 20pt;
 }
 
-.mat_grid > button {
+.mat-button {
     display: block;
     text-decoration: none;
     text-align: center;
     align-items: stretch;
     border-radius: 0px;
     vertical-align: middle;
+    font-size: 24pt;
 }
 
 .mat_submit > button {
@@ -61,6 +63,7 @@
     border-radius: 0px;
     width: 100%;
     height: 10%;
+    font-size: 24pt;
 }
 
 .mat_grid {
@@ -86,6 +89,13 @@
     margin-left: auto;
     margin-right: auto;
     height:100%;
+}
+
+.center_matrix {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width:45%;
 }
 
 #eeg_test_table td {

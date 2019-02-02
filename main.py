@@ -41,7 +41,7 @@ def url_ok(url, port):
 def create_new_window():
     webview.create_window("Participant view",
                           "http://127.0.0.1:23948/participant_home",
-                          width=1000, height=700, min_size=(1000, 500), debug=True)
+                          width=1000, height=900, min_size=(1000, 900), debug=True)
 
 
 if __name__ == '__main__':
@@ -67,5 +67,5 @@ if __name__ == '__main__':
     # Create browser window for user interaction with GUI
     webview.create_window("BPLabs",
                           "http://127.0.0.1:23948/home",
-                          width=1000, height=700, min_size=(1000, 500), debug=True)
+                          width=1000, height=900, min_size=(1000, 900), debug=True)
 
