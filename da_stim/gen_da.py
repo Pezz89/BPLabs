@@ -14,6 +14,8 @@ import resampy
 def gen_da_stim(n, outpath):
     da_file = './BioMAP_da-40ms.wav'
     da_stim, fs, enc, fmt = sndio.read(da_file, return_format=True)
+    da_stim = resampy.resample(da_stim, fs, 44100)
+    fs = 44100
     prestim_size = 0.0158
     # Repetition rate in Hz
     repetition_rate = 10.9
@@ -32,8 +34,7 @@ def gen_da_stim(n, outpath):
     idx = np.arange(y_l.size)
     trigger = gen_trigger(idx, 2., 0.01, fs)
 
-    y = np.vstack((y_l, y_r, trigger))
-    y = resampy.resample(y, fs, 44100).T
+    y = np.vstack((y_l, y_r, trigger)).T
     sndio.write(outpath, y, rate = 44100, format = fmt, enc=enc)
     return outpath
 

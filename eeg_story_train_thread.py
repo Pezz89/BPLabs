@@ -126,7 +126,6 @@ class EEGStoryTrainThread(BaseThread):
         '''
         self.wav_files = natsorted(globDir(self.stimDir, '*.wav'))
         q_files = natsorted(globDir(self.stimDir, '*.csv'))
-        set_trace()
         for wav_file, q_file in zip(self.wav_files, q_files):
             q_lines = []
             with open(q_file, 'r') as csvfile:
