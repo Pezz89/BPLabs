@@ -22,6 +22,7 @@ def gen_da_stim(n, outpath):
     prestim = np.zeros(int(fs*prestim_size))
     poststim = np.zeros(int(fs*((full_stim_size-prestim_size)-da_size)))
     y_part = np.concatenate([prestim, da_stim, poststim])
+    pdb.set_trace()
     y_part_inv = -y_part
     loc_part = np.zeros(y_part.size)
     loc_part[prestim.size+1]=1
