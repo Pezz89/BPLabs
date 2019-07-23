@@ -14,13 +14,6 @@ server_lock = Lock()
 
 logger = logging.getLogger(__name__)
 
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
-log = logging.getLogger('engineio')
-log.setLevel(logging.ERROR)
-log = logging.getLogger('socketio')
-log.setLevel(logging.ERROR)
-
 
 def url_ok(url, port):
     # Use httplib on Python 2
@@ -41,7 +34,7 @@ def url_ok(url, port):
 def create_new_window():
     webview.create_window("Participant view",
                           "http://127.0.0.1:23948/participant_home",
-                          width=1000, height=900, min_size=(1000, 900), debug=True)
+                          width=1000, height=700, min_size=(1000, 500))
 
 
 if __name__ == '__main__':
@@ -58,14 +51,15 @@ if __name__ == '__main__':
         sleep(0.1)
 
     logger.debug("Server started")
+    # Create browser window for user interaction with GUI
 
     # Create clinician view
     t2 = Thread(target=create_new_window)
     t2.start()
     # socketio.start_background_task(create_new_window)
-
-    # Create browser window for user interaction with GUI
     webview.create_window("BPLabs",
                           "http://127.0.0.1:23948/home",
-                          width=1000, height=900, min_size=(1000, 900), debug=True)
+                          width=1000, height=700, min_size=(1000, 500))
+    webview.start()
+
 
