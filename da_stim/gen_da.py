@@ -22,14 +22,26 @@ def gen_da_stim(n, outpath):
     prestim = np.zeros(int(fs*prestim_size))
     poststim = np.zeros(int(fs*((full_stim_size-prestim_size)-da_size)))
     y_part = np.concatenate([prestim, da_stim, poststim])
+    pdb.set_trace()
     y_part_inv = -y_part
+    loc_part = np.zeros(y_part.size)
+    loc_part[prestim.size+1]=1
 
     y_2part = np.concatenate([y_part, y_part_inv])
+    loc = np.concatenate([loc_part, loc_part])
     y_r = np.tile(y_2part, n)
+    loc = np.tile(loc, n)
+    loc = np.insert(loc, 0, np.zeros(fs))
+    loc = np.where(loc)[0]
+
     y_r = np.insert(y_r, 0, np.zeros(fs))
     y_r = resampy.resample(y_r, fs, 44100)
+    rat = 44100/fs
     fs = 44100
     y_l = np.zeros(y_r.size)
+    loc = loc * rat
+    loc=loc.round().astype(int)
+    np.save('./stimulus/3000_da_locs.npy', loc)
 
     idx = np.arange(y_l.size)
     trigger = gen_trigger(idx, 2., 0.01, fs)

@@ -74,14 +74,15 @@ def concatenateStimuli(MatrixDir, OutDir, Length, n):
     parts = []
     questions = []
     i = 0
-    for wav in wavFiles:
+    gapSize = np.uniform(0.8, 1.2, len(wavFiles))
+    for wav, gap in zip(wavFiles, gapSize):
         if i == n:
             break
         wavObj = PySndfile(wav)
         fs = wavObj.samplerate()
         size = wavObj.frames()
         totalSize += size
-        totalSize += int(0.1*fs)
+        totalSize += int(gap*fs)
         if (totalSize/fs) > Length:
             # total size + 2 second silence at start
             y.append(np.zeros((totalSize+2*fs, 3)))
