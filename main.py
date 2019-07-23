@@ -60,6 +60,6 @@ if __name__ == '__main__':
     webview.create_window("BPLabs",
                           "http://127.0.0.1:23948/home",
                           width=1000, height=700, min_size=(1000, 500))
-    webview.start()
+    webview.start(debug=True)
 
 

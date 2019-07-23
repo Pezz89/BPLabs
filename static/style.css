@@ -67,10 +67,12 @@
 }
 
 .mat_grid {
+    /*
     display: grid;
     align-content: center;
     grid-template-columns: repeat(5, 1fr);
     grid-template-rows: repeat(10, 1fr);
+    */
     height: calc(90% - 56px);
 }
 
