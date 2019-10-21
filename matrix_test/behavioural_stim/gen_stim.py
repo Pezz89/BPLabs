@@ -45,7 +45,6 @@ def gen_indexes(list_dir, speech_dir):
     component_map = json.loads(json_data)
 
     column_names = ['a', 'b', 'c', 'd', 'e']
-    list_indexes = np.array([])
     sentence_lists = {}
     for list_file in list_files:
         with open(list_file, 'r') as lfile:
