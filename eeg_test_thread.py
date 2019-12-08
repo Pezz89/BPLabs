@@ -62,9 +62,6 @@ class EEGTestThread(BaseThread):
         self.question = []
         self.response = []
 
-        with open('./test_params.json') as json_file:
-            self.params = json.load(json_file)
-
         self.reduction_coef = np.load(red_coef)*np.load(cal_coef)
 
         # Percent speech inteligibility (estimated using behavioural measure)
@@ -187,6 +184,8 @@ class EEGTestThread(BaseThread):
             raise KeyError("Behavioural matrix test results not available, make "
                            "sure the behavioural test has been run before "
                            "running this test.")
+        save_dir = self.participant.data_paths['eeg_test/stimulus']
+        '''
         # Estimate speech intelligibility thresholds using predicted
         # psychometric function
         s_50 *= 0.01
@@ -194,14 +193,16 @@ class EEGTestThread(BaseThread):
         snrs = (x/(4*s_50))+srt_50
         snrs = np.append(snrs, np.inf)
         snr_map = pd.DataFrame({"speech_intel" : np.append(self.si, 0.0), "snr": snrs})
-        save_dir = self.participant.data_paths['eeg_test/stimulus']
         snr_map_path = os.path.join(save_dir, "snr_map.csv")
         snr_map.to_csv(snr_map_path)
         snrs = np.repeat(snrs[np.newaxis], 4, axis=0)
         snrs = roll_independant(snrs, np.array([0,-1,-2,-3]))
-        noise_file = PySndfile(self.noise_path, 'r')
         stim_dirs = [x for x in os.listdir(self.listDir) if os.path.isdir(os.path.join(self.listDir, x))]
         shuffle(stim_dirs)
+        '''
+        snrs = self.participant.data['parameters']['decoder_test_SNRs'] + srt_50
+        stim_dirs = self.participant.data['parameters']['decoder_test_stim_dirs']
+        noise_file = PySndfile(self.noise_path, 'r')
         wav_files = []
         question = []
         marker_files = []

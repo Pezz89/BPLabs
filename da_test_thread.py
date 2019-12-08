@@ -42,7 +42,6 @@ class DaTestThread(BaseThread):
                  stimFolder='./da_stim/',
                  noiseFilepath="./da_stim/noise/wav/noise/noise_norm.wav",
                  noiseRMSFilepath="./da_stim/noise/rms/noise_rms.npy",
-                 daPeakFilepath="./da_stim/stimulus/peak/10min_da_peak.npy",
                  red_coef="./calibration/out/reduction_coefficients/da_red_coef.npy",
                  cal_coef="./calibration/out/calibration_coefficients/da_cal_coef.npy",
                  nTrials=2, socketio=None, participant=None, srt_50=None,
