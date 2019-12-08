@@ -39,16 +39,15 @@ class DaTestThread(BaseThread):
     Thread for running server side matrix test operations
     '''
     def __init__(self, sessionFilepath=None,
-                 stimFolder='./da_stim/',
-                 noiseFilepath="./da_stim/noise/wav/noise/noise_norm.wav",
-                 noiseRMSFilepath="./da_stim/noise/rms/noise_rms.npy",
-                 red_coef="./calibration/out/reduction_coefficients/da_red_coef.npy",
-                 cal_coef="./calibration/out/calibration_coefficients/da_cal_coef.npy",
+                 stimFolder='./tone_stim/',
+                 noiseFilepath="./tone_stim/noise/wav/noise/noise.wav",
+                 noiseRMSFilepath="./tone_stim/noise/rms/noise_rms.npy",
+                 red_coef="./calibration/out/reduction_coefficients/tone_red_coef.npy",
+                 cal_coef="./calibration/out/calibration_coefficients/tone_cal_coef.npy",
                  nTrials=2, socketio=None, participant=None, srt_50=None,
                  s_50=None):
 
         self.reduction_coef = np.load(red_coef)*np.load(cal_coef)
-        self.wav_file = os.path.join(stimFolder, '3000_da.wav')
         self.noise_path = noiseFilepath
         self.noise_rms = np.load(noiseRMSFilepath)
         self.stim_folder = stimFolder
@@ -66,7 +65,7 @@ class DaTestThread(BaseThread):
                                            socketio=socketio,
                                            participant=participant)
 
-        self.toSave = ['stim_paths', 'trial_ind', 'nTrials', 'wav_file', 'test_name', 'si']
+        self.toSave = ['stim_paths', 'trial_ind', 'nTrials', 'test_name', 'si']
 
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
 
@@ -115,6 +114,7 @@ class DaTestThread(BaseThread):
         #reduction_coef = float(np.load(os.path.join(self.listDir, 'reduction_coef.npy')))
 
         # Calculate SNRs based on behavioural measures
+        '''
         s_50 *= 0.01
         shuffle(self.si)
         x = logit(self.si * 0.01)
@@ -128,36 +128,41 @@ class DaTestThread(BaseThread):
         self.snr_fs[self.snr_fs == np.inf] = 0.
         if (self.snr_fs == -np.inf).any():
             raise ValueError("Noise infinitely louder than signal for an SNR (SNRs: {})".format(self.snr_fs))
+        '''
 
-
-        wavs = globDir(self.stim_folder, "3000_da.wav") * len(snrs)
-        rms_files = globDir(self.stim_folder, "overall_da_rms.npy") * len(snrs)
-
-        self.socketio.emit('test_stim_load', namespace='/main')
-        # Add noise to audio files at set SNRs and write to participant
-        # directory
+        snrs = self.participant.data['parameters']['decoder_test_SNRs'] + srt_50
+        stim_dirs = self.participant.data['parameters']['decoder_test_stim_dirs']
         self.data_path = self.participant.data_paths[self.test_name]
         out_dir = os.path.join(self.data_path, "stimulus")
         delete_if_exists(out_dir)
         out_info = os.path.join(out_dir, "stim_info.csv")
         dir_must_exist(out_dir)
 
-        with open(out_info, 'w') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(['wav', 'snr_fs', 'rms', 'si', 'snr'])
-            for wav, snr_fs, rms, si, snr in zip(wavs, self.snr_fs, rms_files, self.si, snrs):
-                fp = os.path.splitext(os.path.basename(wav))[0]+"_{}.wav".format(snr)
-                out_wavpath =  os.path.join(out_dir, fp)
-                stim_rms = np.load(rms)
-                match_ratio = stim_rms/self.noise_rms
-                block_mix_wavs(wav, self.noise_path, out_wavpath,
-                               1.*self.reduction_coef,
-                               snr_fs*match_ratio*self.reduction_coef,
-                               mute_left=True)
-                self.stim_paths.extend([out_wavpath] * self.nTrials)
-                writer.writerow([wav, snr_fs, rms, si, snr])
-                # TODO: Output SI/snrs of each file to a CSV file
-        #audio, fs, enc, fmt = sndio.read(wav, return_format=True)
+        for ind, dir_name in enumerate(stim_dirs):
+            stim_dir = os.path.join(self.listDir, dir_name)
+            wavs = globDir(stim_dir, "*.wav")[0] * len(snrs)
+            rms_files = globDir(stim_dir, "*.npy")[0] * len(snrs)
+
+            self.socketio.emit('test_stim_load', namespace='/main')
+            # Add noise to audio files at set SNRs and write to participant
+            # directory
+
+            with open(out_info, 'w') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['wav', 'snr_fs', 'rms', 'si', 'snr'])
+                for wav, snr_fs, rms, si, snr in zip(wavs, self.snr_fs, rms_files, self.si, snrs):
+                    fp = os.path.splitext(os.path.basename(wav))[0]+"_{}.wav".format(snr)
+                    out_wavpath =  os.path.join(out_dir, fp)
+                    stim_rms = np.load(rms)
+                    match_ratio = stim_rms/self.noise_rms
+                    block_mix_wavs(wav, self.noise_path, out_wavpath,
+                                self.reduction_coef,
+                                snr_fs*match_ratio*self.reduction_coef,
+                                mute_left=True)
+                    self.stim_paths.extend([out_wavpath] * self.nTrials)
+                    writer.writerow([wav, snr_fs, rms, si, snr])
+                    # TODO: Output SI/snrs of each file to a CSV file
+            #audio, fs, enc, fmt = sndio.read(wav, return_format=True)
 
 
     def saveState(self, out="test_state.pkl"):

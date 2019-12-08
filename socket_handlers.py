@@ -105,7 +105,7 @@ Participant socket handlers
 def manage_participant_delete(participant_str):
     shutil.rmtree(participants[participant_str].participant_dir)
     del participants[participant_str]
-    return render_template("manage_participants.html", part_keys=participants.keys())
+    return render_template("manage_participants.html", part_keys=natsorted(participants.keys()))
 
 @socketio.on('update_participant_info', namespace='/main')
 def manage_participant_save(data):

@@ -43,7 +43,7 @@ def gen_participant_num(participants, N = 100):
     taken_nums = []
     for part_key in participants.keys():
         participant = participants[part_key]
-        taken_nums.append(int(participant['info']['number'][0]))
+        taken_nums.append(int(participant['info']['number']))
     inds = np.arange(N)+1
     taken_inds = np.in1d(inds, taken_nums)
 
@@ -190,6 +190,7 @@ def main():
         # Is the hearing loss simulator active for this participant?
         # Even numbers yes, odd numbers no
         hl_sim_active = (i-1 % 2) == 0
+        participant_params['hl_sim_active'] = hl_sim_active
         # What order are the decoder stories presented?
         # What order are the behavioral test stimuli presented?
         # What order are the tone SNRs presented at?
@@ -207,11 +208,12 @@ def main():
 
 
         key = "participant_{}".format(i)
-        participants[key] = Participant(participant_dir="./participant_data/{}".format(key), parameters=participant_params)
+        print(f"Generating: {key}")
+        participants[key] = Participant(participant_dir="./participant_data/{}".format(key), number=i, parameters=participant_params)
         participants[key].save("info")
+    print(f"Generated {part_nums.size} new participant databases")
 
 
-    breakpoint()
 
 if __name__ == '__main__':
     main()

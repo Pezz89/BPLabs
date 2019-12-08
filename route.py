@@ -19,6 +19,7 @@ import numpy as np
 import random
 from pysndfile import sndio
 from scipy.optimize import minimize
+from natsort import natsorted
 
 from app import generate_matrix_stimulus
 from matrix_test.helper_modules.filesystem import globDir, organiseWavs, prepareOutDir
@@ -99,7 +100,7 @@ Participant routing
 def manage_participant_page():
     # Find all pre-existing participants
     participants = find_participants()
-    return render_template("manage_participants.html", part_keys=participants.keys())
+    return render_template("manage_participants.html", part_keys=natsorted(participants.keys()))
 
 @server.route('/participant/create')
 def create_participant_page():
@@ -121,7 +122,7 @@ def create_participant_submit():
     key = "participant_{}".format(data['number'])
     participants[key] = Participant(participant_dir="./participant_data/{}".format(key), **data)
     participants[key].save("info")
-    return render_template("manage_participants.html", part_keys = participants.keys())
+    return render_template("manage_participants.html", part_keys = natsorted(participants.keys()))
 
 '''
 EEG routing
@@ -129,7 +130,7 @@ EEG routing
 @server.route('/eeg')
 def eeg_setup():
     participants = find_participants()
-    return render_template("eeg_setup.html", part_keys=participants.keys())
+    return render_template("eeg_setup.html", part_keys=natsorted(participants.keys()))
 
 @server.route('/eeg/test/run')
 def eeg_test_run():
@@ -185,7 +186,7 @@ Matrix behavioral test routing
 @server.route('/matrix_test')
 def matrix_test_setup():
     participants = find_participants()
-    return render_template("matrix_test_setup.html", part_keys=participants.keys())
+    return render_template("matrix_test_setup.html", part_keys=natsorted(participants.keys()))
 
 @server.route('/matrix_test/run')
 def run_matrix_test():
@@ -213,7 +214,7 @@ Click stimulus routing
 @server.route('/click/setup')
 def click_setup():
     participants = find_participants()
-    return render_template("click_test_setup.html", part_keys=participants.keys())
+    return render_template("click_test_setup.html", part_keys=natsorted(participants.keys()))
 
 @server.route('/click/clinician/run')
 def click_clinician_run():
@@ -238,7 +239,7 @@ def click_complete():
 @server.route('/da/setup')
 def da_setup():
     participants = find_participants()
-    return render_template("da_test_setup.html", part_keys=participants.keys())
+    return render_template("da_test_setup.html", part_keys=natsorted(participants.keys()))
 
 @server.route('/da/clinician/run')
 def da_clinician_run():
