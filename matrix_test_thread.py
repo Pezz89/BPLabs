@@ -418,7 +418,7 @@ class AdaptiveTrack():
     def __init__(self, target, red_coef, cal_coef):
         '''
         '''
-        self.snr = 0.0
+        self.snr = 10.0
         self.direction = 0
         # Record SNRs presented with each trial of the adaptive track
         self.snrTrack = np.empty(180)

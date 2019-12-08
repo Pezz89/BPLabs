@@ -50,7 +50,7 @@ class EEGTestThread(BaseThread):
                  listFolder="./matrix_test/short_concat_stim/out",
                  noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
                  red_coef="./calibration/out/reduction_coefficients/mat_red_coef.npy",
-                 cal_coef="./calibration/out/calibration_coefficients/da_cal_coef.npy",
+                 cal_coef="./calibration/out/calibration_coefficients/mat_cal_coef.npy",
                  socketio=None, participant=None, srt_50=None, s_50=None):
         self.test_name = 'eeg_test'
         self.noise_path = noiseFilepath
@@ -62,11 +62,13 @@ class EEGTestThread(BaseThread):
         self.question = []
         self.response = []
 
+        with open('./test_params.json') as json_file:
+            self.params = json.load(json_file)
+
         self.reduction_coef = np.load(red_coef)*np.load(cal_coef)
 
         # Percent speech inteligibility (estimated using behavioural measure)
         # to present stimuli at
-        self.si = np.array([20.0, 35.0, 50.0, 65.0, 80.0, 90.0])
         self.trial_ind = 0
         self._stopevent = Event()
 
