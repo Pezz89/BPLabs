@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import sys
-sys.path.insert(0, "../helper_modules")
-sys.path.insert(0, "../matrix_test/helper_modules/")
+#sys.path.insert(0, "../helper_modules")
+#sys.path.insert(0, "../matrix_test/helper_modules/")
 
 import argparse
 import os
@@ -18,25 +18,15 @@ from pysndfile import PySndfile, sndio
 import matplotlib.pyplot as plt
 
 from pathops import dir_must_exist
-try:
-    from signalops import rolling_window_lastaxis, calc_rms, block_process_wav
-except ImportError:
-    from .signalops import rolling_window_lastaxis, block_lfilter, calc_rms, block_process_wav
+from signalops import rolling_window_lastaxis, block_lfilter, calc_rms, block_process_wav
 
 import scipy.signal as sgnl
 from scipy.stats import pearsonr
 
-from pyswarm import pso
 
-try:
-    from lpc import lpc
-except ImportError:
-    from .lpc import lpc
+from lpc import lpc
 
-try:
-    from filesystem import globDir, organiseWavs, prepareOutDir
-except ImportError:
-    from .filesystem import globDir, organiseWavs, prepareOutDir
+from filesystem import globDir, organiseWavs, prepareOutDir
 
 
 def block_lfilter_wav(b, a, x, outfile, fmt, fs, blocksize=8192):
@@ -204,7 +194,7 @@ def calc_spectrum(files, silences, fs=44100, plot=False):
 def gen_noise(OutDir, b, fs, s_rms):
     print("Generating noise...")
     # Generate 10 minutes of white noise
-    x = np.random.randn(int(fs*60.*20.))
+    x = np.random.randn(int(fs*60.*5.))
     x /= x.max()
     noiseDir = os.path.join(OutDir, 'wav')
     noiseRMSDir = os.path.join(OutDir, 'rms')
@@ -212,7 +202,7 @@ def gen_noise(OutDir, b, fs, s_rms):
     noiseDir = os.path.join(noiseDir, 'noise')
     dir_must_exist(noiseDir)
     y, y_max = block_lfilter_wav(b, [1.0], x, os.path.join(noiseDir, 'noise.wav'), 65538, 44100)
-    block_process_wav(os.path.join(noiseDir, 'noise.wav'), os.path.join(noiseDir, 'noise_norm.wav'), lambda x: x / (y_max * 0.95))
+    block_process_wav(os.path.join(noiseDir, 'noise.wav'), os.path.join(noiseDir, 'noise_norm.wav'), lambda x: x / (y_max * 1.05))
     noise_rms_path = os.path.join(noiseRMSDir, 'noise_rms.npy')
     y = y/(np.abs(y).max() * 0.95)
     rms = np.sqrt(np.mean(y**2))
