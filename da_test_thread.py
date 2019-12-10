@@ -137,6 +137,7 @@ class DaTestThread(BaseThread):
         delete_if_exists(out_dir)
         out_info = os.path.join(out_dir, "stim_info.csv")
         dir_must_exist(out_dir)
+        breakpoint()
 
         for ind, dir_name in enumerate(stim_dirs):
             stim_dir = os.path.join(self.listDir, dir_name)

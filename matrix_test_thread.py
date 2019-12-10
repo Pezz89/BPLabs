@@ -425,7 +425,7 @@ class AdaptiveTrack():
         self.snrTrack[:] = np.nan
         self.snrTrack[0] = 0.0
         # Count number of presented trials
-        self.trialN = 0
+        self.trialN = 1
         self.reduction_coef = np.load(red_coef)*np.load(cal_coef)
         self.wordsCorrect = np.full((180, 5), False, dtype=bool)
 
