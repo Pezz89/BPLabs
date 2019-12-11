@@ -13,10 +13,14 @@ import itertools
 import copy
 import logging
 from loggerops import create_logger, log_newline
-import textwrap
+import shutil
+import os
+from pathlib import Path
+from datetime import datetime
 import re
 
 logger = logging.getLogger(__name__)
+nowtime = datetime.now()
 
 from config import server, socketio, participants
 
@@ -58,7 +62,7 @@ def gen_participant_num(participants, N = 100):
 
 
 class Participant:
-    def __init__(self, participant_dir=None, number=None, age=None, gender=None, handedness=None, general_notes=None, parameters={}):
+    def __init__(self, participant_dir=None, number=None, age=None, gender=None, handedness=None, general_notes=None, parameters={}, gen_time=datetime.now()):
         '''
         '''
         dir_must_exist(participant_dir)
@@ -66,6 +70,7 @@ class Participant:
         self.data_paths = {}
         self.generate_folder_hierachy()
         self.parameters = parameters
+        self.gen_time = gen_time
 
         self.data = {
             "info": {
@@ -163,13 +168,13 @@ def main():
     # Generate all permutations of tests for couterbalancing
     tests = general_params['tests']
     cb_tests = list(itertools.permutations(tests))
-    tone_freqs = general_params['tone_freq']
+    tone_freqs = general_params['tone_freqs']
     cb_tone_freqs = list(itertools.permutations(tone_freqs))
 
     # Make sure that the number of participants is a multiple of the number of
     # counterbalanced tests
-    cb_lcm = np.lcm.reduce([len(cb_tests), len(cb_tone_freqs)])
-    n_participants = cb_lcm * 6
+    cb_lcm = np.lcm.reduce([len(cb_tests), len(cb_tone_freqs), 4])
+    n_participants = cb_lcm * 3
     part_nums = gen_participant_num(participants, N=n_participants)
     n_decoder_repeats = general_params['decoder_test_SNR_repeats']
     # Get all decoder test stimuli
@@ -187,7 +192,7 @@ def main():
         random.shuffle(sd_copy)
         participant_params['decoder_test_lists'] = sd_copy
         # Generate randomised stimulus/SNR combinations for each participant
-        snrs = np.array(general_params['decoder_SNRs'], dtype=float)
+        snrs = np.array(general_params['decoder_test_SNRs'], dtype=float)
         np.random.shuffle(snrs)
         snrs = np.repeat(snrs[np.newaxis], n_decoder_repeats, axis=0)
         snrs = roll_independant(snrs, np.array(np.arange(n_decoder_repeats)+1-n_decoder_repeats))
@@ -195,9 +200,21 @@ def main():
 
         # Is the hearing loss simulator active for this participant?
         # Even numbers yes, odd numbers no
-        hl_sim_active = (i-1 % 2) == 0
+        hl_sim_active = ((i-1) % 2) == 0
         participant_params['hl_sim_active'] = hl_sim_active
         # What order are the decoder stories presented?
+        dec_train_lists = general_params['decoder_train_lists']
+        if (int((i-1)/2) % 2) == 0:
+            # Play second story first for half the participants
+            participant_params['decoder_train_lists'] = dec_train_lists[4:8]+dec_train_lists[0:4]
+        else:
+            participant_params['decoder_train_lists'] = dec_train_lists
+
+        # What order are the decoder test stimuli presented?
+        dtl_copy = copy.copy(general_params['decoder_test_lists'])
+        np.random.shuffle(dtl_copy)
+        participant_params['decoder_test_lists'] = dtl_copy
+
         # What order are the behavioral test stimuli presented?
         participant_params['behavioral_train_lists'] = np.random.choice(
             general_params['behavioral_train_lists'],
@@ -216,14 +233,17 @@ def main():
         # What order are the tones presented at?
         # Set the order of tone frequencies to be presented to the current
         # participant, using previous counterbalancing above
-        participant_params['tone_freqs'] = list(cb_tone_freqs[(i-1) % len(cb_tone_freqs)])
-
-
+        participant_params['tone_freqs'] = list(cb_tone_freqs[int(((i-1)/4)) % len(cb_tone_freqs)])
+        final_params = copy.copy(general_params)
+        final_params.update(participant_params)
 
         key = "participant_{}".format(i)
         logger.info("{:<78}".format(f"Generating: {key}"))
-        participants[key] = Participant(participant_dir="./participant_data/{}".format(key), number=i, parameters=participant_params)
+        participants[key] = Participant(participant_dir="./participant_data/{}".format(key),
+                    number=i, parameters=final_params, gen_time=nowtime)
         participants[key].save("info")
+
+        # Log all parameters of the current participant
         for key, val in participants[key].parameters.items():
             if type(val) is np.ndarray:
                 val = val.tolist()
@@ -236,15 +256,11 @@ def main():
 
 
 if __name__ == '__main__':
-    import shutil
-    import os
-    from pathlib import Path
-    from datetime import datetime
     logs_dir = Path('./logs/')
     logs_dir.mkdir(exist_ok=True)
     logfile_dir =  logs_dir / __file__
     logfile_dir.mkdir(exist_ok=True)
-    logfile_name = datetime.now().strftime("%m-%d-%Y_%H-%M-%S")+'.log'
+    logfile_name = nowtime.strftime("%m-%d-%Y_%H-%M-%S")+'.log'
     logger = create_logger(
         logger_streamlevel=10,
         log_filename=str(logfile_dir/logfile_name),

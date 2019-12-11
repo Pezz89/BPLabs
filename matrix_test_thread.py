@@ -89,11 +89,9 @@ class MatTestThread(BaseThread):
         else:
             raise ValueError(f"{mode} is not a valid mode value")
 
-
         self.adaptiveTracks = [AdaptiveTrack(x, red_coef, cal_coef) for x in track_targets]
         self.trackOrder = []
         track_targets = np.array(self.participant.data['parameters']['behavioural_track_targets'])/100.
-
 
         self.listN = int(listN)
         self.loadedLists = []
