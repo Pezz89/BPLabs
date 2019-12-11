@@ -11,6 +11,13 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="form-group">
+                <select class="form-control" name="mode" id="mode">
+                    <option>Familiarisation</option>
+                    <option>Testing</option>
+                    <option>Testingssjks</option>
+                </select>
+            </div>
             <div class="form-group d-flex justify-content-center">
                 <button type="button" id="submit" class="btn btn-primary mx-3">Start new test</button>
                 <button type="button" id="load-saved" class="btn btn-primary mx-3">Load saved session</button>
@@ -33,7 +40,7 @@
             return false;
         })
         $('#submit').click(function(event) {
-            socket.emit('start_test', {listN: $("#listN").val(), part_key: $("#participant").val(), test_name: "mat_test"});
+            socket.emit('start_test', {part_key: $("#participant").val(), mode: $("#mode").val(), test_name: "mat_test"});
             return false;
         })
 

@@ -9,6 +9,9 @@ import random
 from scipy.optimize import minimize
 import csv
 from shutil import copy2
+import sys
+import traceback
+from loggerops import log_exceptions
 
 from pysndfile import sndio, PySndfile
 from matrix_test.helper_modules.filesystem import globDir
@@ -17,6 +20,9 @@ import sounddevice as sd
 import pdb
 
 from config import socketio
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 def run_matrix_thread(listN=3, sessionFilepath=None, participant=None):
@@ -60,6 +66,7 @@ class MatTestThread(BaseThread):
     '''
     Thread for running server side matrix test operations
     '''
+    @log_exceptions
     def __init__(self, listN=5, sessionFilepath=None,
                  noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise_norm.wav",
                  noiseRMSFilepath="./matrix_test/behavioural_stim/stimulus/rms/noise_rms.npy",
@@ -67,12 +74,25 @@ class MatTestThread(BaseThread):
                  red_coef="./calibration/out/reduction_coefficients/mat_red_coef.npy",
                  cal_coef="./calibration/out/calibration_coefficients/mat_cal_coef.npy",
                  track_targets=[0.2, 0.5, 0.8],
+                 mode='testing',
                  socketio=None, participant=None):
 
         self.listDir = listFolder
+        self.participant = participant
+        self.participant_parameters = self.participant.data['parameters']
+        if mode == "familiarisation":
+            self.inds = self.participant_parameters['behavioural_training_lists']
+            logger.info("Running participant_{self.participant.data['number']}, familiarisation")
+        elif mode == "testing":
+            self.inds = self.participant_parameters['behavioural_test_lists']
+            logger.info("Running participant_{self.participant.data['number']}, testing")
+        else:
+            raise ValueError(f"{mode} is not a valid mode value")
+
 
         self.adaptiveTracks = [AdaptiveTrack(x, red_coef, cal_coef) for x in track_targets]
         self.trackOrder = []
+        track_targets = np.array(self.participant.data['parameters']['behavioural_track_targets'])/100.
 
 
         self.listN = int(listN)
@@ -302,6 +322,7 @@ class MatTestThread(BaseThread):
         self.playStimulus(self.y, self.fs)
 
     def loadStimulus(self):
+
         # Get folder path of all lists in the list directory
         lists = next(os.walk(self.listDir))[1]
         lists.pop(lists.index("demo"))
@@ -310,10 +331,9 @@ class MatTestThread(BaseThread):
         for i in sorted(pop, reverse=True):
             del lists[i]
         # Randomly select n lists
-        inds = list(range(len(lists)))
-        random.shuffle(inds)
+        inds = self.inds
+        # random.shuffle(inds)
         # Pick first n shuffled lists
-        inds = inds[:self.listN]
         for ind in inds:
             # Get filepaths to the audiofiles and word csv file for the current
             # list
@@ -336,7 +356,8 @@ class MatTestThread(BaseThread):
                     self.listsString[-1].append(words)
 
         # Number of trials to split between adaptive tracks
-        n = len(self.lists[0])*self.listN
+        n = len(self.lists[0])*len(inds)
+        #Number of adaptive tracks active
         tn = len(self.adaptiveTracks)
         self.trackOrder = list(np.repeat(np.arange(tn), np.floor(n/tn)))
         random.shuffle(self.trackOrder)

@@ -8,6 +8,10 @@ from shutil import copy2
 from threading import Thread, Event
 from config import socketio
 
+import sys
+import logging
+logger = logging.getLogger(__name__)
+
 from WavPlayer import WavPlayer
 
 def run_test_thread(name, thread_type, sessionFilepath=None, participant=None, **kwargs):
@@ -15,7 +19,7 @@ def run_test_thread(name, thread_type, sessionFilepath=None, participant=None, *
     if thread_name in globals():
         thread = globals()[thread_name]
         if thread.isAlive() and isinstance(thread, thread_type):
-            daTestThread.join()
+            thread.join()
     thread = thread_type(socketio=socketio, sessionFilepath=sessionFilepath,
                          participant=participant, **kwargs)
     thread.start()
@@ -274,4 +278,8 @@ class BaseThread(Thread):
         '''
         This function is called when the thread starts
         '''
-        return self.testLoop()
+        try:
+            return self.testLoop()
+        except:
+            e = sys.exc_info()[0]
+            logger.exception(e)

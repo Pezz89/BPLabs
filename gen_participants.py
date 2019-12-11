@@ -11,6 +11,12 @@ random.seed(42)
 np.random.seed(42)
 import itertools
 import copy
+import logging
+from loggerops import create_logger, log_newline
+import textwrap
+import re
+
+logger = logging.getLogger(__name__)
 
 from config import server, socketio, participants
 
@@ -150,7 +156,7 @@ def roll_independant(A, r):
 def main():
     '''
     '''
-    print("***REMEMBER THIS SCRIPTS WILL NOT OVERWRITE ANY EXISTING PARTICIPANT DATA. PLEASE DELETE THIS MANUALLY IF NEEDED!***")
+    logger.warning("***REMEMBER THIS SCRIPTS WILL NOT OVERWRITE ANY EXISTING PARTICIPANT DATA. PLEASE DELETE THIS MANUALLY IF NEEDED!***")
     participants = find_participants()
     with open('./test_params.json') as json_file:
         general_params = json.load(json_file)
@@ -193,6 +199,13 @@ def main():
         participant_params['hl_sim_active'] = hl_sim_active
         # What order are the decoder stories presented?
         # What order are the behavioral test stimuli presented?
+        participant_params['behavioral_train_lists'] = np.random.choice(
+            general_params['behavioral_train_lists'],
+            [general_params['behavioral_train_N']], replace=False)
+        participant_params['behavioral_test_lists'] = np.random.choice(
+            general_params['behavioral_test_lists'],
+            [general_params['behavioral_test_N']], replace=False)
+
         # What order are the tone SNRs presented at?
         n_tone_repeats = general_params['tone_repeats']
         tone_snrs = np.array(general_params['tone_SNRs'], dtype=float)
@@ -208,12 +221,33 @@ def main():
 
 
         key = "participant_{}".format(i)
-        print(f"Generating: {key}")
+        logger.info("{:<78}".format(f"Generating: {key}"))
         participants[key] = Participant(participant_dir="./participant_data/{}".format(key), number=i, parameters=participant_params)
         participants[key].save("info")
+        for key, val in participants[key].parameters.items():
+            if type(val) is np.ndarray:
+                val = val.tolist()
+            trunc_str = re.sub(r'^(.{75}).*$', '\g<1>...', f"{key:<25}{val}")
+            logger.info(f"{trunc_str: <78}")
+        logger.info("-"*78)
+
     print(f"Generated {part_nums.size} new participant databases")
 
 
 
 if __name__ == '__main__':
+    import shutil
+    import os
+    from pathlib import Path
+    from datetime import datetime
+    logs_dir = Path('./logs/')
+    logs_dir.mkdir(exist_ok=True)
+    logfile_dir =  logs_dir / __file__
+    logfile_dir.mkdir(exist_ok=True)
+    logfile_name = datetime.now().strftime("%m-%d-%Y_%H-%M-%S")+'.log'
+    logger = create_logger(
+        logger_streamlevel=10,
+        log_filename=str(logfile_dir/logfile_name),
+        logger_filelevel=10
+    )
     main()

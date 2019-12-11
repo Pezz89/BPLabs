@@ -7,6 +7,7 @@ from time import sleep
 from server import run_server
 import config
 from threading import Thread, Lock
+from loggerops import create_logger
 
 socketio = config.socketio
 
@@ -28,7 +29,7 @@ def url_ok(url, port):
         r = conn.getresponse()
         return r.status == 200
     except:
-        logger.exception("Server not started")
+        logger.error("Server not started")
         return False
 
 def create_new_window():
@@ -38,6 +39,15 @@ def create_new_window():
 
 
 if __name__ == '__main__':
+    logger = create_logger(
+        logger_streamlevel=10,
+        log_filename='./logs/main.log',
+        logger_filelevel=10
+    )
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+    log = logging.getLogger('engineio')
+    log.setLevel(logging.ERROR)
     logger.debug("Starting server")
     # Run server in seperate thread
     # socketio.start_background_task(run_server)
