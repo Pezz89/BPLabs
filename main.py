@@ -14,6 +14,8 @@ socketio = config.socketio
 server_lock = Lock()
 
 logger = logging.getLogger(__name__)
+logging.getLogger('matplotlib.font_manager').disabled = True
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
 
 def url_ok(url, port):

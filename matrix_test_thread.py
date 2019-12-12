@@ -79,17 +79,18 @@ class MatTestThread(BaseThread):
 
         self.listDir = listFolder
         self.participant = participant
-        self.participant_parameters = self.participant.data['parameters']
-        if mode == "familiarisation":
-            self.inds = self.participant_parameters['behavioural_training_lists']
-            logger.info("Running participant_{self.participant.data['number']}, familiarisation")
-        elif mode == "testing":
+        self.participant_parameters = self.participant.parameters
+        if mode.lower() == "familiarisation":
+            self.inds = self.participant_parameters['behavioural_train_lists']
+            logger.info(f"Running participant_{self.participant.data['info']['number']}, familiarisation")
+        elif mode.lower() == "testing":
             self.inds = self.participant_parameters['behavioural_test_lists']
-            logger.info("Running participant_{self.participant.data['number']}, testing")
+            logger.info(f"Running participant_{self.participant.data['info']['number']}, testing")
         else:
             raise ValueError(f"{mode} is not a valid mode value")
 
-        self.adaptiveTracks = [AdaptiveTrack(x, red_coef, cal_coef) for x in track_targets]
+        self.adaptiveTracks = [AdaptiveTrack(x, red_coef, cal_coef, snr=self.participant_parameters['behavioural_init_snr']) for x in track_targets]
+        logger.info(f"{len(self.adaptiveTracks)} adaptive tracks initialised with initial SNRs: {[x.snr for x in self.adaptiveTracks]}")
         self.trackOrder = []
         track_targets = np.array(self.participant.data['parameters']['behavioural_track_targets'])/100.
 
@@ -167,6 +168,7 @@ class MatTestThread(BaseThread):
 
         self.displayInstructions()
         self.waitForPartReady()
+
         while not self.finishTest and not self._stopevent.isSet() and len(self.availableSentenceInds) and len(self.trackOrder):
             # Plot SNR of current trial to the clinician screen
             for at in self.adaptiveTracks:
@@ -184,6 +186,11 @@ class MatTestThread(BaseThread):
             # Define words presented in the current trial
             self.currentWords = self.listsString[0][currentSentenceInd]
 
+            logger.info("-"*78)
+            logger.info("{0:<25}".format("Current trial:") + f"{' '.join(self.currentWords)}")
+            logger.info("{0:<25}".format("Current track index:") + f"{self.adTrInd}")
+            logger.info("{0:<25}".format("Current trial number:") + f"{self.trialN}")
+            logger.info("{0:<25}".format("Current SNR:") + f"{self.adaptiveTracks[self.adTrInd].snr}")
             self.playStimulus(self.y, self.fs)
             self.waitForResponse()
             self.checkSentencesAvailable()
@@ -191,14 +198,17 @@ class MatTestThread(BaseThread):
                 break
             if self._stopevent.isSet():
                 return
+            logger.info("{0:<25}".format("N correct responses:") + f"{int(self.nCorrect*5)}")
             self.adaptiveTracks[self.adTrInd].calcSNR(self.nCorrect)
             self.checkSentencesAvailable()
             self.saveState(out=self.backupFilepath)
             self.trialN += 1
             self.adaptiveTracks[self.adTrInd].incrementTrialN()
         self.saveState(out=self.backupFilepath)
+        logger.info("-"*78)
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
+            logger.info("Behavioural test complete")
             self.socketio.emit('processing-complete', {'data': ''}, namespace='/main')
             self.waitForPageLoad()
             # Plot SNR of current trial to the clinician screen
@@ -375,8 +385,6 @@ class MatTestThread(BaseThread):
             self.adaptiveTracks[ind].setNoise(noise, noise_rms)
 
 
-
-
     def submitMatResponse(self, msg):
         '''
         Get and store participant response for current trial
@@ -434,15 +442,15 @@ class MatTestThread(BaseThread):
 class AdaptiveTrack():
     '''
     '''
-    def __init__(self, target, red_coef, cal_coef):
+    def __init__(self, target, red_coef, cal_coef, snr=10.0):
         '''
         '''
-        self.snr = 10.0
+        self.snr = snr
         self.direction = 0
         # Record SNRs presented with each trial of the adaptive track
         self.snrTrack = np.empty(180)
         self.snrTrack[:] = np.nan
-        self.snrTrack[0] = 0.0
+        self.snrTrack[0] = self.snr
         # Count number of presented trials
         self.trialN = 1
         self.reduction_coef = np.load(red_coef)*np.load(cal_coef)

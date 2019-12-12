@@ -147,6 +147,7 @@ class BaseThread(Thread):
         this function correctly, self.partReady must be set to True via a socketio
         handler in order to continue the test.
         '''
+        logger.info("Waiting for participant to continue to test...")
         while not self.partReady and not self._stopevent.isSet() and not self.finishTest:
             self._stopevent.wait(0.5)
         self.partReady = False

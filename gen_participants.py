@@ -44,6 +44,7 @@ def find_participants(folder='./participant_data/'):
         part_key = os.path.basename(path)
         participants[part_key] = Participant(participant_dir=path)
         participants[part_key].load('info')
+        participants[part_key].load('parameters')
     return participants
 
 def gen_participant_num(participants, N = 100):
@@ -215,13 +216,13 @@ def main():
         np.random.shuffle(dtl_copy)
         participant_params['decoder_test_lists'] = dtl_copy
 
-        # What order are the behavioral test stimuli presented?
-        participant_params['behavioral_train_lists'] = np.random.choice(
-            general_params['behavioral_train_lists'],
-            [general_params['behavioral_train_N']], replace=False)
-        participant_params['behavioral_test_lists'] = np.random.choice(
-            general_params['behavioral_test_lists'],
-            [general_params['behavioral_test_N']], replace=False)
+        # What order are the behavioural test stimuli presented?
+        participant_params['behavioural_train_lists'] = np.random.choice(
+            general_params['behavioural_train_lists'],
+            [general_params['behavioural_train_N']], replace=False)
+        participant_params['behavioural_test_lists'] = np.random.choice(
+            general_params['behavioural_test_lists'],
+            [general_params['behavioural_test_N']], replace=False)
 
         # What order are the tone SNRs presented at?
         n_tone_repeats = general_params['tone_repeats']
@@ -242,6 +243,7 @@ def main():
         participants[key] = Participant(participant_dir="./participant_data/{}".format(key),
                     number=i, parameters=final_params, gen_time=nowtime)
         participants[key].save("info")
+        participants[key].save("parameters")
 
         # Log all parameters of the current participant
         for key, val in participants[key].parameters.items():
