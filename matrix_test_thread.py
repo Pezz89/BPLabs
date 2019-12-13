@@ -264,8 +264,8 @@ class MatTestThread(BaseThread):
     def fitLogistic(self):
         '''
         '''
-        self.wordsCorrect = np.concatenate([x.getWordsCorrect() for x in self.adaptiveTracks])[1:]
-        self.trackSNR = np.concatenate([x.getSNRTrack() for x in self.adaptiveTracks])[:-1]
+        self.wordsCorrect = np.concatenate([x.getWordsCorrect() for x in self.adaptiveTracks])
+        self.trackSNR = np.concatenate([x.getSNRTrack() for x in self.adaptiveTracks])
         inds = np.argsort(self.trackSNR)
         wcs = self.wordsCorrect[inds]
         stsnr = self.trackSNR[inds]
@@ -337,7 +337,6 @@ class MatTestThread(BaseThread):
         plot_url = "data:image/png;base64,{}".format(plot_url)
         self.srt_50, self.s_50 = srt_50, s_50
         self.socketio.emit("mat_mle_plot_ready", {'data': plot_url}, namespace="/main")
-        breakpoint()
 
 
 
@@ -420,12 +419,12 @@ class MatTestThread(BaseThread):
         '''
         self.response = [x.upper() for x in msg['resp']]
         self.responses.append(self.response)
-        self.newResp = True
         correct = np.array([x == y for x, y in zip(self.currentWords, self.response)])
         self.nCorrect = np.sum(correct)/correct.size
         self.wordsCorrect[self.trialN] = correct
         self.adaptiveTracks[self.adTrInd].wordsCorrect[self.adaptiveTracks[self.adTrInd].trialN] = correct
         self.presentedWords.append(self.currentWords)
+        self.newResp = True
 
 
     def loadState(self, filepath):
