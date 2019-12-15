@@ -93,6 +93,7 @@ class EEGTestThread(BaseThread):
         '''
         Main loop for iteratively finding the SRT
         '''
+        srt_50=self.participant.data['mat_test']['srt_50']
         self.waitForPageLoad()
         self.loadResponse()
         self.socketio.emit(
@@ -101,18 +102,19 @@ class EEGTestThread(BaseThread):
              self.question[0][1][0]}, namespace='/main'
         )
         # For each stimulus
-        trials = list(zip(self.wav_files, self.question))[self.trial_ind:]
-        for (wav, q) in trials:
+        trials = list(zip(self.wav_files, self.question, self.wav_metas))[self.trial_ind:]
+        for (wav, q, meta) in trials:
             self.saveState(out=self.backupFilepath)
             self.displayInstructions()
             self.waitForPartReady()
             if self._stopevent.isSet() or self.finishTest:
                 break
-            breakpoint()
+            snr = np.around(np.load(meta)-srt_50, decimals=1)
             logger.info("-"*78)
-            logger.info("{0:<25}".format("Current trial:") + f"{' '.join(self.currentWords)}")
-            logger.info("{0:<25}".format("Current trial number:") + f"{self.trial_ind}")
-            logger.info("{0:<25}".format("Current SNR:") + f"{self.adaptiveTracks[self.adTrInd].snr}")
+            logger.info("{0:<25}".format("Current trial:") + f"{self.trial_ind}")
+            logger.info("{0:<25}".format("Current question 1:") + f"{' '.join(q[0][:-1])} | Answer: {q[0][-1]}")
+            logger.info("{0:<25}".format("Current question 2:") + f"{' '.join(q[1][:-1])} | Answer: {q[1][-1]}")
+            logger.info("{0:<25}".format("Current SNR(-srt):") + f"{snr}")
             # Play concatenated matrix sentences at set SNR
             self.playStimulusWav(wav)
             self.setMatrix(q)
@@ -223,17 +225,16 @@ class EEGTestThread(BaseThread):
             for folder in stim_dirs:
                 if re.match(f'Stim_({int(ind)})', folder):
                     ordered_stim_dirs.append(folder)
-        breakpoint()
 
-        ordered_stim_dirs *= int(len(snrs))
+        # ordered_stim_dirs *= int(len(snrs))
         noise_file = PySndfile(self.noise_path, 'r')
         wav_files = []
+        wav_metas = []
         question = []
         marker_files = []
         self.socketio.emit('test_stim_load', namespace='/main')
-        n_stim_dirs = len(ordered_stim_dirs)
-        for ind, dir_name in enumerate(ordered_stim_dirs):
-            logger.debug(f"Processing list directory {ind} of {n_stim_dirs}")
+        for ind, dir_name in enumerate(ordered_stim_dirs[:snrs.shape[1]]):
+            logger.debug(f"Processing list directory {ind+1} of {snrs.shape[1]}")
             stim_dir = os.path.join(self.listDir, dir_name)
             wav = globDir(stim_dir, "*.wav")[0]
             csv_files = natsorted(globDir(stim_dir, "*.csv"))
@@ -247,6 +248,7 @@ class EEGTestThread(BaseThread):
             speech = audio[:, :2]
             triggers = audio[:, 2]
             wf = []
+            wm = []
             for ind2, s in enumerate(snr):
                 start = randint(0, noise_file.frames()-speech.shape[0])
                 noise_file.seek(start)
@@ -267,8 +269,10 @@ class EEGTestThread(BaseThread):
                         set_trace()
                 out_wav = np.concatenate([out_wav, triggers[:, np.newaxis]], axis=1)
                 sndio.write(out_wav_path, out_wav, fs, fmt, enc)
-                np.save(out_meta_path, snr)
+                np.save(out_meta_path, s)
                 wf.append(out_wav_path)
+                wm.append(out_meta_path)
+            wav_metas.append(wm)
             wav_files.append(wf)
             out_marker_path = os.path.join(save_dir, "Marker_{0}.csv".format(ind))
             marker_files.append(out_marker_path)
@@ -287,15 +291,12 @@ class EEGTestThread(BaseThread):
                 question.append(q)
 
         self.wav_files = [item for sublist in wav_files for item in sublist]
+        self.wav_metas = [item for sublist in wav_metas for item in sublist]
 
         self.question.extend(question)
 
         for item in marker_files:
             self.marker_files.extend([item] * 4)
-
-        c = list(zip(self.wav_files, self.marker_files, self.question))
-        shuffle(c)
-        self.wav_files, self.marker_files, self.question = zip(*c)
 
         self.answers = np.empty(np.shape(self.question)[:2])
         self.answers[:] = np.nan
@@ -311,7 +312,7 @@ class EEGTestThread(BaseThread):
 
     def saveState(self, out="eeg_test_state.pkl"):
         toSave = ['marker_files', 'wav_files', 'participant', 'response',
-                  'backupFilepath', 'noise_path', 'question_files', 'si',
+                  'backupFilepath', 'noise_path', 'question_files',
                   'question', 'answers', 'trial_ind']
         saveDict = {k:self.__dict__[k] for k in toSave}
         with open(out, 'wb') as f:
