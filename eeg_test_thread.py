@@ -9,6 +9,7 @@ from natsort import natsorted
 import numpy as np
 import pandas as pd
 from shutil import copy2
+import re
 
 from test_base import BaseThread, run_test_thread
 from scipy.special import logit
@@ -16,6 +17,9 @@ from config import socketio
 import csv
 import pdb
 import dill
+
+import logging
+logger = logging.getLogger(__name__)
 
 symb_dict = {
     True: 10003,
@@ -62,6 +66,10 @@ class EEGTestThread(BaseThread):
         self.question = []
         self.response = []
 
+        self.participant = participant
+        self.participant_parameters = self.participant.parameters
+
+
         self.reduction_coef = np.load(red_coef)*np.load(cal_coef)
 
         # Percent speech inteligibility (estimated using behavioural measure)
@@ -73,6 +81,7 @@ class EEGTestThread(BaseThread):
                                             sessionFilepath=sessionFilepath,
                                             socketio=socketio,
                                             participant=participant)
+
 
         self.socketio.on_event('submit_eeg_response', self.submitTestResponse, namespace='/main')
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
@@ -99,10 +108,16 @@ class EEGTestThread(BaseThread):
             self.waitForPartReady()
             if self._stopevent.isSet() or self.finishTest:
                 break
+            breakpoint()
+            logger.info("-"*78)
+            logger.info("{0:<25}".format("Current trial:") + f"{' '.join(self.currentWords)}")
+            logger.info("{0:<25}".format("Current trial number:") + f"{self.trial_ind}")
+            logger.info("{0:<25}".format("Current SNR:") + f"{self.adaptiveTracks[self.adTrInd].snr}")
             # Play concatenated matrix sentences at set SNR
             self.playStimulusWav(wav)
             self.setMatrix(q)
         self.saveState(out=self.backupFilepath)
+        logger.info("-"*78)
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
             self.socketio.emit('processing-complete', namespace='/main')
@@ -201,13 +216,24 @@ class EEGTestThread(BaseThread):
         shuffle(stim_dirs)
         '''
         snrs = self.participant.data['parameters']['decoder_test_SNRs'] + srt_50
-        stim_dirs = self.participant.data['parameters']['decoder_test_stim_dirs']
+        stim_dirs = [x for x in os.listdir(self.listDir) if os.path.isdir(os.path.join(self.listDir, x))]
+
+        ordered_stim_dirs = []
+        for ind in self.participant_parameters['decoder_test_lists']:
+            for folder in stim_dirs:
+                if re.match(f'Stim_({int(ind)})', folder):
+                    ordered_stim_dirs.append(folder)
+        breakpoint()
+
+        ordered_stim_dirs *= int(len(snrs))
         noise_file = PySndfile(self.noise_path, 'r')
         wav_files = []
         question = []
         marker_files = []
         self.socketio.emit('test_stim_load', namespace='/main')
-        for ind, dir_name in enumerate(stim_dirs):
+        n_stim_dirs = len(ordered_stim_dirs)
+        for ind, dir_name in enumerate(ordered_stim_dirs):
+            logger.debug(f"Processing list directory {ind} of {n_stim_dirs}")
             stim_dir = os.path.join(self.listDir, dir_name)
             wav = globDir(stim_dir, "*.wav")[0]
             csv_files = natsorted(globDir(stim_dir, "*.csv"))

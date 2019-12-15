@@ -228,8 +228,14 @@ def main():
         n_tone_repeats = general_params['tone_repeats']
         tone_snrs = np.array(general_params['tone_SNRs'], dtype=float)
         np.random.shuffle(tone_snrs)
-        snrs = np.repeat(tone_snrs[np.newaxis], n_tone_repeats, axis=1)
-        participant_params['tone_SNRs'] = snrs
+
+        tone_snrs = np.repeat(tone_snrs[np.newaxis], n_tone_repeats, axis=1)
+        # Remove inf SNRs
+        infs = np.isinf(tone_snrs)
+        tone_snrs = tone_snrs[~infs]
+        # Prepend inf SNRS so they are always presented first
+        tone_snrs = np.concatenate([[np.inf]*infs.sum(), tone_snrs])
+        participant_params['tone_SNRs'] = tone_snrs
 
         # What order are the tones presented at?
         # Set the order of tone frequencies to be presented to the current
