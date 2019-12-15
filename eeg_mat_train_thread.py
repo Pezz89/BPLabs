@@ -113,7 +113,6 @@ class EEGMatTrainThread(BaseThread):
         if (self.snr_fs == -np.inf).any():
             raise ValueError("Noise infinitely louder than signal for an SNR (SNRs: {})".format(self.snr_fs))
 
-
         wavs = globDir(self.stim_folder, "*.wav")
         questions = globDir(self.stim_folder, "stim_questions_*.csv")
         if not len(questions):

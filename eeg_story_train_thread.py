@@ -45,6 +45,9 @@ class EEGStoryTrainThread(BaseThread):
         self.nTrials = nTrials
         self.trial_ind = 0
 
+        self.participant = participant
+        self.participant_parameters = self.participant.parameters
+
         self.selected_q = []
         self.question = []
         self.answers = [''] * 8

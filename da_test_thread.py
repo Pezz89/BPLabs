@@ -19,6 +19,10 @@ from config import socketio
 import csv
 import pdb
 import dill
+import re
+
+import logging
+logger = logging.getLogger(__name__)
 
 symb_dict = {
     True: 10003,
@@ -39,9 +43,9 @@ class DaTestThread(BaseThread):
     Thread for running server side matrix test operations
     '''
     def __init__(self, sessionFilepath=None,
-                 stimFolder='./tone_stim/',
+                 stimFolder='./tone_stim/stimulus',
                  noiseFilepath="./tone_stim/noise/wav/noise/noise.wav",
-                 noiseRMSFilepath="./tone_stim/noise/rms/noise_rms.npy",
+                 noiseintensityFilepath="./tone_stim/noise/intensity/noise_intensity.npy",
                  red_coef="./calibration/out/reduction_coefficients/tone_red_coef.npy",
                  cal_coef="./calibration/out/calibration_coefficients/tone_cal_coef.npy",
                  nTrials=2, socketio=None, participant=None, srt_50=None,
@@ -49,23 +53,24 @@ class DaTestThread(BaseThread):
 
         self.reduction_coef = np.load(red_coef)*np.load(cal_coef)
         self.noise_path = noiseFilepath
-        self.noise_rms = np.load(noiseRMSFilepath)
+        self.noise_intensity = np.load(noiseintensityFilepath)
         self.stim_folder = stimFolder
         self.stim_paths = []
 
-        self.test_name = 'da_test'
+        self.participant = participant
+        self.participant_parameters = self.participant.parameters
+
+        self.test_name = 'tone_test'
         self.nTrials = nTrials
         self.trial_ind = 0
         self._stopevent = Event()
-        # (Completely clean stimulus and stimulus at +10dB added by default later)
-        self.si = np.array([19.0, 50.0, 81.0])
 
         super(DaTestThread, self).__init__(self.test_name,
                                            sessionFilepath=sessionFilepath,
                                            socketio=socketio,
                                            participant=participant)
 
-        self.toSave = ['stim_paths', 'trial_ind', 'nTrials', 'test_name', 'si']
+        self.toSave = ['stim_paths', 'trial_ind', 'nTrials', 'test_name']
 
         self.socketio.on_event('finalise_results', self.finaliseResults, namespace='/main')
 
@@ -84,10 +89,16 @@ class DaTestThread(BaseThread):
             self.waitForPartReady()
             if self._stopevent.isSet() or self.finishTest:
                 break
-            # Play concatenated matrix sentences at set SNR
+            logger.info("-"*78)
+            _, freq, snr_fs = re.findall(".tone_(\d+)_(\d+)Hz_([-+]?\d*\.\d+|\d+).", wav)[0]
+            snr = float(snr_fs) - self.participant.data['mat_test']['srt_50']
+            logger.info("{0:<25}".format("Current trial:") + f" {self.trial_ind}")
+            logger.info("{0:<25}".format("Current SNR:") + f"{snr}")
+            logger.info("{0:<25}".format("Current frequency:") + f"{freq}")
             self.playStimulusWav(wav)
             self.trial_ind += 1
         self.saveState(out=self.backupFilepath)
+        logger.info("-"*78)
         if not self._stopevent.isSet():
             self.unsetPageLoaded()
             self.socketio.emit('processing-complete', namespace='/main')
@@ -130,19 +141,35 @@ class DaTestThread(BaseThread):
             raise ValueError("Noise infinitely louder than signal for an SNR (SNRs: {})".format(self.snr_fs))
         '''
 
-        snrs = self.participant.data['parameters']['decoder_test_SNRs'] + srt_50
-        stim_dirs = self.participant.data['parameters']['decoder_test_stim_dirs']
+        snrs = np.squeeze(self.participant.data['parameters']['tone_SNRs'])
+        snrs[~np.isinf(snrs)] += srt_50
+        self.snr_fs = 10**(-snrs/20)
+        self.snr_fs[self.snr_fs == np.inf] = 0.
+        if (self.snr_fs == -np.inf).any():
+            raise ValueError("Noise infinitely louder than signal for an SNR (SNRs: {})".format(self.snr_fs))
+
         self.data_path = self.participant.data_paths[self.test_name]
         out_dir = os.path.join(self.data_path, "stimulus")
         delete_if_exists(out_dir)
         out_info = os.path.join(out_dir, "stim_info.csv")
         dir_must_exist(out_dir)
-        breakpoint()
 
-        for ind, dir_name in enumerate(stim_dirs):
-            stim_dir = os.path.join(self.listDir, dir_name)
-            wavs = globDir(stim_dir, "*.wav")[0] * len(snrs)
-            rms_files = globDir(stim_dir, "*.npy")[0] * len(snrs)
+        stim_dirs = [x for x in os.listdir(self.stim_folder) if os.path.isdir(os.path.join(self.stim_folder, x))]
+
+        ordered_stim_dirs = []
+        for freq in self.participant_parameters['tone_freqs']:
+            for folder in stim_dirs:
+                if re.match(f'tone_({int(freq)})', folder):
+                    ordered_stim_dirs.append(folder)
+        ordered_stim_dirs *= int(len(snrs))
+
+
+
+
+        for ind, dir_name in enumerate(ordered_stim_dirs):
+            stim_dir = os.path.join(self.stim_folder, dir_name)
+            wavs = globDir(stim_dir, "*.wav")
+            intensity_files = globDir(stim_dir, "*intensity.npy")
 
             self.socketio.emit('test_stim_load', namespace='/main')
             # Add noise to audio files at set SNRs and write to participant
@@ -150,18 +177,18 @@ class DaTestThread(BaseThread):
 
             with open(out_info, 'w') as csvfile:
                 writer = csv.writer(csvfile)
-                writer.writerow(['wav', 'snr_fs', 'rms', 'si', 'snr'])
-                for wav, snr_fs, rms, si, snr in zip(wavs, self.snr_fs, rms_files, self.si, snrs):
+                writer.writerow(['wav', 'snr_fs', 'intensity', 'snr'])
+                for wav, snr_fs, intensity, snr in zip(wavs, self.snr_fs, intensity_files, snrs):
                     fp = os.path.splitext(os.path.basename(wav))[0]+"_{}.wav".format(snr)
                     out_wavpath =  os.path.join(out_dir, fp)
-                    stim_rms = np.load(rms)
-                    match_ratio = stim_rms/self.noise_rms
+                    stim_intensity = np.load(intensity)
+                    match_ratio = stim_intensity/self.noise_intensity
                     block_mix_wavs(wav, self.noise_path, out_wavpath,
                                 self.reduction_coef,
                                 snr_fs*match_ratio*self.reduction_coef,
-                                mute_left=True)
-                    self.stim_paths.extend([out_wavpath] * self.nTrials)
-                    writer.writerow([wav, snr_fs, rms, si, snr])
+                                mute_left=False)
+                    self.stim_paths.extend([out_wavpath])
+                    writer.writerow([wav, snr_fs, intensity, snr])
                     # TODO: Output SI/snrs of each file to a CSV file
             #audio, fs, enc, fmt = sndio.read(wav, return_format=True)
 

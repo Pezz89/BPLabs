@@ -97,7 +97,7 @@ class Participant:
                 "notes": ''
             },
 
-            "da_test": {
+            "tone_test": {
                 "notes": ''
             },
 
@@ -114,7 +114,7 @@ class Participant:
     def generate_folder_hierachy(self):
         '''
         '''
-        sub_dirs = ["mat_test", "da_test", "pta", "click_test", "info",
+        sub_dirs = ["mat_test", "tone_test", "pta", "click_test", "info",
                     "eeg_story_train", "eeg_mat_train", "eeg_test",
                     "eeg_test/stimulus", "parameters"]
         for dir_name in sub_dirs:
