@@ -12,6 +12,7 @@ from shutil import copy2
 import sys
 import traceback
 from loggerops import log_exceptions
+from scipy.io import loadmat
 
 from pysndfile import sndio, PySndfile
 from matrix_test.helper_modules.filesystem import globDir
@@ -375,6 +376,8 @@ class MatTestThread(BaseThread):
             # list
             listAudiofiles = globDir(os.path.join(self.listDir, lists[ind]), "*.wav")
             listCSV = globDir(os.path.join(self.listDir, lists[ind]), "*.csv")
+            levels = globDir(os.path.join(self.listDir, lists[ind]), "*.mat")
+
             with open(listCSV[0]) as csv_file:
                 csv_reader = csv.reader(csv_file)
                 # Allocate empty lists to store audio samples, RMS and words of
@@ -383,8 +386,9 @@ class MatTestThread(BaseThread):
                 self.listsRMS.append([])
                 self.listsString.append([])
                 # Get data for each sentence
-                for fp, words in zip(listAudiofiles, csv_reader):
+                for fp, words, level_file in zip(listAudiofiles, csv_reader, levels):
                     # Read in audio file and calculate it's RMS
+                    level = loadmat(level_file)
                     x, self.fs, _ = sndio.read(fp)
                     x_rms = np.sqrt(np.mean(x**2))
                     self.lists[-1].append(x)

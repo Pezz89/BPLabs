@@ -22,7 +22,6 @@ def main():
     v = np.array(v)
     v = v/(v.max()*2)
     v[np.isnan(v)] = 0.0
-    out = {}
     for key, val in zip(vals.keys(), v):
         out_file = './out/calibration_coefficients/{}_cal_coef.npy'.format(key)
         np.save(out_file, val)
