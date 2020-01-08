@@ -90,7 +90,7 @@ class DaTestThread(BaseThread):
             if self._stopevent.isSet() or self.finishTest:
                 break
             logger.info("-"*78)
-            _, freq, snr_fs = re.findall(".tone_(\d+)_(\d+)Hz_([-+]?\d*\.\d+|\d+).", wav)[0]
+            _, freq, snr_fs = re.findall(".tone_(\d+)_(\d+)Hz_([-+]?\d*\.\d+|\d+|inf).", wav)[0]
             snr = float(snr_fs) - self.participant.data['mat_test']['srt_50']
             logger.info("{0:<25}".format("Current trial:") + f" {self.trial_ind}")
             logger.info("{0:<25}".format("Current SNR:") + f"{snr}")

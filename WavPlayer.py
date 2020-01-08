@@ -35,7 +35,7 @@ class WavPlayer(Thread):
             pass
 
 
-    def play_wav_async(self, wav_file, buffersize=20, blocksize=1024, socketio=None):
+    def play_wav_async(self, wav_file, buffersize=1024, blocksize=1024, socketio=None):
         q = queue.Queue(maxsize=buffersize)
 
         def callback(outdata, frames, time, status):
