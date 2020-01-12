@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 import re
+from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 nowtime = datetime.now()
@@ -42,7 +43,7 @@ def find_participants(folder='./participant_data/'):
                         if os.path.isdir(os.path.join(folder,o))]
     for path in part_folder:
         part_key = os.path.basename(path)
-        participants[part_key] = Participant(participant_dir=path)
+        participants[part_key] = deepcopy(Participant(participant_dir=path))
         participants[part_key].load('info')
         participants[part_key].load('parameters')
     return participants
@@ -144,6 +145,7 @@ class Participant:
         '''
         '''
         folder = os.path.join(self.participant_dir, data_key)
+        # print(f"Participant {self.data['info']['number']}: {folder}")
         with open(os.path.join(folder, "{}.pkl".format(data_key)), 'rb') as f:
             self.data[data_key].update(dill.load(f))
 

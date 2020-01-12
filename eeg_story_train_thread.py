@@ -19,6 +19,9 @@ import csv
 import pdb
 import dill
 
+import sounddevice as sd
+from hearing_loss_sim import apply_hearing_loss_sim
+
 symb_dict = {
     True: 10003,
     False: 10007
@@ -38,7 +41,7 @@ class EEGStoryTrainThread(BaseThread):
     Thread for running server side matrix test operations
     '''
     def __init__(self, sessionFilepath=None,
-                 stimFolder='./eeg_story_stim/', nTrials=2,
+                 stimFolder='./eeg_story_stim/stimulus/', nTrials=2,
                  socketio=None, participant=None, srt_50=None, s_50=None):
         self.test_name = 'eeg_story_train'
         self.stimDir = stimFolder
@@ -90,6 +93,7 @@ class EEGStoryTrainThread(BaseThread):
             if self._stopevent.isSet() or self.finishTest:
                 break
             # Play concatenated matrix sentences at set SNR
+
             self.playStimulus(wav)
             self.waitForResponse()
             if self._stopevent.isSet() or self.finishTest:
@@ -142,20 +146,37 @@ class EEGStoryTrainThread(BaseThread):
     def displayInstructions(self):
         self.socketio.emit('display_instructions', namespace='/main')
 
-
-    def playStimulus(self, wav_file, replay=False):
+    def playStimulus(self, wav):
+        '''
+        Output audio stimulus from numpy array
+        '''
         self.newResp = False
         self.socketio.emit("stim_playing", namespace="/main")
-        # if not replay:
-        #     self.y = self.generateTrial(self.snr)
+        x, fs, _ = sndio.read(wav)
+        if self.participant.parameters['hl_sim_active']:
+            y = apply_hearing_loss_sim(x, fs)
         # Play audio
-        # sd.play(self.y, self.fs, blocking=True)
         if not self.dev_mode:
-            self.play_wav(wav_file, 'finish_test')
+            sd.play(y, fs, blocking=True)
         else:
-            self.play_wav('./da_stim/DA_170.wav', 'finish_test')
-
+            self.play_wav('./da_stim/DA_170.wav', '')
         self.socketio.emit("stim_done", namespace="/main")
+
+    # def playStimulus(self, wav_file, replay=False):
+
+    #     x, fs, _ = sndio.read(wav_file)
+    #     self.newResp = False
+    #     self.socketio.emit("stim_playing", namespace="/main")
+    #     # if not replay:
+    #     #     self.y = self.generateTrial(self.snr)
+    #     # Play audio
+    #     # sd.play(self.y, self.fs, blocking=True)
+    #     if not self.dev_mode:
+    #         self.play_wav(wav_file, 'finish_test')
+    #     else:
+    #         self.play_wav('./da_stim/DA_170.wav', 'finish_test')
+
+    #     self.socketio.emit("stim_done", namespace="/main")
 
 
     def saveState(self, out="test_state.pkl"):

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys
 sys.path.insert(0, "../helper_modules/")
+sys.path.insert(0, "../../")
 
 import os
 from filesystem import globDir
@@ -17,17 +18,27 @@ import csv
 from copy import copy
 from contextlib import ExitStack
 from scipy.signal import square
+from ITU_P56 import asl_P56
+from pathlib import Path
+
 
 def calc_potential_max(stim_folder, noise_filepath, out_dir):
     max_wav_samp = 0
     max_wav_rms = 0
     wavs = globDir(stim_folder, '*.wav')
-    for wav in wavs:
+    n_files = len(wavs)
+    for ind, wav in enumerate(wavs):
         x, fs, enc = sndio.read(wav)
         max_wav_samp = np.max([max_wav_samp, np.max(np.abs(x))])
-        max_wav_rms = np.max([max_wav_rms, np.sqrt(np.mean(x**2))])
+        #max_wav_rms = np.max([max_wav_rms, np.sqrt(np.mean(x**2))])
+        level = asl_P56(x, fs, 16.)[0]
+        max_wav_rms = np.max([max_wav_rms, ])
+        print(f"Calculated level of {Path(wav).name} ({ind+1}/{n_files}): {level}")
     x, fs, enc = sndio.read(noise_filepath)
-    noise_rms = np.sqrt(np.mean(x**2))
+    # noise_rms = np.sqrt(np.mean(x**2))
+    print(f"Calculating level of {Path(noise_filepath).name}")
+    noise_rms, _, _ = asl_P56(x, fs, 16.)
+    print(f"Calculated level of {Path(noise_filepath).name}: {noise_rms}")
     max_noise_samp = max(np.abs(x))
 
     snr = -15.0
@@ -56,7 +67,7 @@ def main():
     dir_must_exist(wav_dir)
     dir_must_exist(noise_dir)
 
-    noise_filepath = "../behavioural_stim/stimulus/wav/noise/noise.wav"
+    noise_filepath = "../behavioural_stim/stimulus/wav/noise/noise_norm.wav"
 
     folders = os.listdir(base_dir)
     folders = natsorted(folders)[1:15]

@@ -10,7 +10,10 @@ import numpy as np
 import pandas as pd
 from shutil import copy2
 import re
+import sounddevice as sd
+from ITU_P56 import asl_P56
 
+from hearing_loss_sim import apply_hearing_loss_sim
 from test_base import BaseThread, run_test_thread
 from scipy.special import logit
 from config import socketio
@@ -52,7 +55,7 @@ class EEGTestThread(BaseThread):
     '''
     def __init__(self, sessionFilepath=None,
                  listFolder="./matrix_test/short_concat_stim/out",
-                 noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise.wav",
+                 noiseFilepath="./matrix_test/behavioural_stim/stimulus/wav/noise/noise_norm.wav",
                  red_coef="./calibration/out/reduction_coefficients/mat_red_coef.npy",
                  cal_coef="./calibration/out/calibration_coefficients/mat_cal_coef.npy",
                  socketio=None, participant=None, srt_50=None, s_50=None):
@@ -116,7 +119,7 @@ class EEGTestThread(BaseThread):
             logger.info("{0:<25}".format("Current question 2:") + f"{' '.join(q[1][:-1])} | Answer: {q[1][-1]}")
             logger.info("{0:<25}".format("Current SNR(-srt):") + f"{snr}")
             # Play concatenated matrix sentences at set SNR
-            self.playStimulusWav(wav)
+            self.playStimulus(wav)
             self.setMatrix(q)
         self.saveState(out=self.backupFilepath)
         logger.info("-"*78)
@@ -171,8 +174,8 @@ class EEGTestThread(BaseThread):
     def finaliseResults(self):
         toSave = ['marker_files', 'clinPageLoaded', 'wav_files', 'participant',
                   'response', 'backupFilepath', 'noise_path', 'question_files',
-                  'si', 'question', 'answers', 'trial_ind']
-        saveDict = {k:self.__dict__[k] for k in toSave}
+                  'question', 'answers', 'trial_ind']
+        saveDict = {k:self.__dict__[k] for k in toSave if k in self.__dict__.keys()}
         self.participant['eeg_test'].update(saveDict)
         self.participant.save("eeg_test")
         backup_path = os.path.join(self.participant.data_paths['eeg_test'],
@@ -240,20 +243,22 @@ class EEGTestThread(BaseThread):
             csv_files = natsorted(globDir(stim_dir, "*.csv"))
             marker_file = csv_files[0]
             question_files = csv_files[1:]
-            rms_file = globDir(stim_dir, "*.npy")[0]
-            speech_rms = float(np.load(rms_file))
+            # rms_file = globDir(stim_dir, "*.npy")[0]
+            # speech_rms = float(np.load(rms_file))
             snr = snrs[:, ind]
             audio, fs, enc, fmt = sndio.read(wav, return_format=True)
 
             speech = audio[:, :2]
             triggers = audio[:, 2]
+            speech_rms, _, _ = asl_P56(speech, fs, 16.)
             wf = []
             wm = []
             for ind2, s in enumerate(snr):
                 start = randint(0, noise_file.frames()-speech.shape[0])
                 noise_file.seek(start)
                 noise = noise_file.read_frames(speech.shape[0])
-                noise_rms = np.sqrt(np.mean(noise**2))
+                #noise_rms = np.sqrt(np.mean(noise**2))
+                noise_rms = asl_P56(noise, fs, 16)
                 snr_fs = 10**(-s/20)
                 if snr_fs == np.inf:
                     snr_fs = 0.
@@ -301,6 +306,22 @@ class EEGTestThread(BaseThread):
         self.answers = np.empty(np.shape(self.question)[:2])
         self.answers[:] = np.nan
 
+
+    def playStimulus(self, wav):
+        '''
+        Output audio stimulus from numpy array
+        '''
+        self.newResp = False
+        self.socketio.emit("stim_playing", namespace="/main")
+        x, fs, _ = sndio.read(wav)
+        if self.participant.parameters['hl_sim_active']:
+            y = apply_hearing_loss_sim(x, fs)
+        # Play audio
+        if not self.dev_mode:
+            sd.play(y, fs, blocking=True)
+        else:
+            self.play_wav('./da_stim/DA_170.wav', '')
+        self.socketio.emit("{}_stim_done".format(self.test_name), namespace="/main")
 
     def submitTestResponse(self, msg):
         '''

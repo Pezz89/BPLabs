@@ -44,7 +44,7 @@ class DaTestThread(BaseThread):
     '''
     def __init__(self, sessionFilepath=None,
                  stimFolder='./tone_stim/stimulus',
-                 noiseFilepath="./tone_stim/noise/wav/noise/noise.wav",
+                 noiseFilepath="./tone_stim/noise/wav/noise/noise_norm.wav",
                  noiseintensityFilepath="./tone_stim/noise/intensity/noise_intensity.npy",
                  red_coef="./calibration/out/reduction_coefficients/tone_red_coef.npy",
                  cal_coef="./calibration/out/calibration_coefficients/tone_cal_coef.npy",

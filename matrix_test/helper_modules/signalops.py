@@ -98,6 +98,7 @@ def block_process_wav(wavpath, out_wavpath, func, block_size=4096, **args):
         y = func(x, **args)
         out_wav.write_frames(y)
         i += block_size
+    del out_wav
 
 def window_rms(a, window_size):
     print("Squaring...")

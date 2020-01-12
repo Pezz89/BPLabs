@@ -16,8 +16,8 @@ def main():
     wavs = globDir("./stimulus", "*.wav")
     for wav in wavs:
         x, fs, enc, fmt = sndio.read(wav, return_format=True)
-        y_r = np.insert(x, 0, np.zeros(fs))
         idx = np.arange(x.shape[0])
+        breakpoint()
         y = np.vstack([x, x, np.zeros(x.shape[0])]).T
         trigger = gen_trigger(idx, 2., 0.01, fs)
         y[:, 2] = trigger

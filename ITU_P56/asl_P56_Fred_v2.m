@@ -26,6 +26,7 @@ g = exp( -1/( fs* T)); % smoothing factor in envelop detection
 c( 1: thres_no)= 2.^ (-15: thres_no- 16);
 % vector with thresholds from one quantizing level up to half the maximum
 % code, at a step of 2, in the case of 16bit samples, from 2^-15 to 0.5;
+
 a( 1: thres_no) = 0; % activity counter for each level threshold
 hang( 1: thres_no) = I; % hangover counter for each level threshold
 

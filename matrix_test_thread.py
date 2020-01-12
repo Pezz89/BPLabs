@@ -21,6 +21,9 @@ import sounddevice as sd
 import pdb
 
 from config import socketio
+from hearing_loss_sim import apply_hearing_loss_sim
+from ITU_P56 import asl_P56
+from pathlib import Path
 
 import logging
 logger = logging.getLogger(__name__)
@@ -143,6 +146,7 @@ class MatTestThread(BaseThread):
         self.loadNoise(noiseFilepath, noiseRMSFilepath)
 
         self.dev_mode = False
+        self.audio_cal = False
 
 
     def displayInstructions(self):
@@ -185,6 +189,8 @@ class MatTestThread(BaseThread):
                 self.lists[0][currentSentenceInd],
                 self.listsRMS[0][currentSentenceInd]
             )
+            if self.participant.parameters['hl_sim_active']:
+                self.y = apply_hearing_loss_sim(self.y, self.fs, channels=[0])
             # Define words presented in the current trial
             self.currentWords = self.listsString[0][currentSentenceInd]
 
@@ -193,7 +199,11 @@ class MatTestThread(BaseThread):
             logger.info("{0:<25}".format("Current track index:") + f"{self.adTrInd}")
             logger.info("{0:<25}".format("Current trial number:") + f"{self.trialN}")
             logger.info("{0:<25}".format("Current SNR:") + f"{self.adaptiveTracks[self.adTrInd].snr}")
-            self.playStimulus(self.y, self.fs)
+            if self.audio_cal:
+                y, fs, fmt = sndio.read('./calibration/out/stimulus/mat_cal_stim.wav')
+                self.playStimulus(y, fs)
+            else:
+                self.playStimulus(self.y, self.fs)
             self.waitForResponse()
             self.checkSentencesAvailable()
             if self.finishTest:
@@ -388,9 +398,9 @@ class MatTestThread(BaseThread):
                 # Get data for each sentence
                 for fp, words, level_file in zip(listAudiofiles, csv_reader, levels):
                     # Read in audio file and calculate it's RMS
-                    level = loadmat(level_file)
                     x, self.fs, _ = sndio.read(fp)
-                    x_rms = np.sqrt(np.mean(x**2))
+                    logger.info(f"Calculating level for {Path(fp).name}")
+                    x_rms, _, _ = asl_P56(x, self.fs, 16.)
                     self.lists[-1].append(x)
                     self.listsRMS[-1].append(x_rms)
                     self.listsString[-1].append(words)
@@ -531,7 +541,7 @@ class AdaptiveTrack():
         x_noise *= x_rms/self.noise_rms
         y = x_noise
         # Set speech to start 500ms after the noise, scaled to the desired SNR
-        sigStart = random.randint(self.fs, round(2*self.fs))
+        sigStart = random.randint(round(self.fs/2.), round(2*self.fs))
         y[sigStart:sigStart+x.size] += x*snr_fs
         y *= self.reduction_coef
         return y

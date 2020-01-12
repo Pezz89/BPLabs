@@ -3,8 +3,8 @@
 		"fileversion" : 1,
 		"appversion" : 		{
 			"major" : 8,
-			"minor" : 0,
-			"revision" : 8,
+			"minor" : 1,
+			"revision" : 1,
 			"architecture" : "x64",
 			"modernui" : 1
 		}
@@ -159,11 +159,12 @@
 					"fontname" : "Arial",
 					"fontsize" : 12.0,
 					"id" : "obj-18",
+					"linecount" : 2,
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 408.0, 215.0, 81.75, 20.0 ],
-					"text" : "70 dB SPL"
+					"patching_rect" : [ 408.0, 215.0, 81.75, 33.0 ],
+					"text" : "70 dB Peak SPL"
 				}
 
 			}
@@ -684,8 +685,8 @@
 						"followglobaltempo" : 0,
 						"formantcorrection" : 0,
 						"mode" : "basic",
-						"originallength" : [ 866265.382312924717553, "ticks" ],
-						"originaltempo" : 119.999999999999943,
+						"originallength" : [ 866265.382312924601138, "ticks" ],
+						"originaltempo" : 119.999999999999929,
 						"pitchcorrection" : 0,
 						"quality" : "basic",
 						"timestretch" : [ 0 ]
@@ -969,8 +970,8 @@
 						"followglobaltempo" : 0,
 						"formantcorrection" : 0,
 						"mode" : "basic",
-						"originallength" : [ 137594.144217686989577, "ticks" ],
-						"originaltempo" : 119.999999999999929,
+						"originallength" : [ 137594.144217686960474, "ticks" ],
+						"originaltempo" : 119.999999999999915,
 						"pitchcorrection" : 0,
 						"quality" : "basic",
 						"timestretch" : [ 0 ]

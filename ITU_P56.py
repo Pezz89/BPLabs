@@ -22,6 +22,7 @@ import scipy.signal as signal
 import matplotlib.pyplot as plt
 
 def asl_P56(x, fs, nbits):
+    nbits = int(nbits)
     eps = np.finfo(float).eps
     x = x[:]  # make sure x is column vector
     if len(x.shape) < 2:

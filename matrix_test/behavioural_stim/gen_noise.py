@@ -3,6 +3,8 @@
 import sys
 #sys.path.insert(0, "../helper_modules")
 #sys.path.insert(0, "../matrix_test/helper_modules/")
+sys.path.insert(0, "../../")
+sys.path.insert(0, "../helper_modules")
 
 import argparse
 import os
@@ -16,6 +18,11 @@ from natsort import natsorted
 from collections import namedtuple
 from pysndfile import PySndfile, sndio
 import matplotlib.pyplot as plt
+from ITU_P56 import asl_P56
+from pathlib import Path
+
+from multiprocessing.dummy import Pool as ThreadPool
+import multiprocessing
 
 from pathops import dir_must_exist
 from signalops import rolling_window_lastaxis, block_lfilter, calc_rms, block_process_wav
@@ -191,7 +198,7 @@ def calc_spectrum(files, silences, fs=44100, plot=False):
     return b
 
 
-def gen_noise(OutDir, b, fs, s_rms):
+def gen_noise(OutDir, b, fs):
     print("Generating noise...")
     # Generate 10 minutes of white noise
     x = np.random.randn(int(fs*60.*5.))
@@ -203,9 +210,14 @@ def gen_noise(OutDir, b, fs, s_rms):
     dir_must_exist(noiseDir)
     y, y_max = block_lfilter_wav(b, [1.0], x, os.path.join(noiseDir, 'noise.wav'), 65538, 44100)
     block_process_wav(os.path.join(noiseDir, 'noise.wav'), os.path.join(noiseDir, 'noise_norm.wav'), lambda x: x / (y_max * 1.05))
+    noise_norm_wav = PySndfile(os.path.join(noiseDir, 'noise_norm.wav'), 'r')
     noise_rms_path = os.path.join(noiseRMSDir, 'noise_rms.npy')
+    y = noise_norm_wav.read_frames(fs*60)
     y = y/(np.abs(y).max() * 0.95)
-    rms = np.sqrt(np.mean(y**2))
+    # rms = np.sqrt(np.mean(y**2))
+    rms, _, _ = asl_P56(y, fs, 16)
+    print(f"Noise level: {rms}")
+
     peak = np.abs(y).max()
     np.save(noise_rms_path, rms)
     np.save('./stimulus/peak/noise_peak.npy', peak)
@@ -215,21 +227,43 @@ def gen_noise(OutDir, b, fs, s_rms):
 def calc_speech_rms(files, silences, rmsDir, fs=44100, plot=False):
     '''
     '''
+    files = files[:3]
+    #silences = silences[:3]
     f = sum(files, [])
-    sumsqrd = 0.0
-    n = 0
-    for wavfile, sil in zip(f, silences):
-        y, fs, _ = sndio.read(wavfile)
-        t = np.arange(y.size)
-        sTemp = np.zeros((sil.shape[0], t.size), dtype=bool)
-        for ind3, s in enumerate(sil):
-            sTemp[ind3, :] = np.logical_and(t > s[0], t < s[1])
-        silentSamples = np.any(sTemp, axis=0)
-        y_temp = y[~silentSamples]
-        sumsqrd += np.sum(y_temp**2)
-        n += y_temp.size
-    rms = np.sqrt(sumsqrd/n)
-    np.save(os.path.join(rmsDir, 'overall_speech_rms.npy'), rms)
+    n_files = len(f)
+    #for ind, (wavfile, sil) in enumerate(zip(f, silences)):
+    def level_calc(args):
+        ind, wavfile = args
+        x, fs, _ = sndio.read(wavfile)
+        level = asl_P56(x, fs, 16.)[0]
+        print(f"Calculated level of {Path(wavfile).name} ({ind+1}/{n_files}): {level}")
+        return level
+
+    # Make the Pool of workers
+    pool = ThreadPool(multiprocessing.cpu_count()-1)
+    # Open the urls in their own threads
+    # and return the results
+    levels = pool.map(level_calc, enumerate(f))
+    #close the pool and wait for the work to finish
+    pool.close()
+    pool.join()
+    rms = np.mean(levels)
+
+    # f = sum(files, [])
+    # sumsqrd = 0.0
+    # n = 0
+    # for wavfile, sil in zip(f, silences):
+    #     y, fs, _ = sndio.read(wavfile)
+    #     t = np.arange(y.size)
+    #     sTemp = np.zeros((sil.shape[0], t.size), dtype=bool)
+    #     for ind3, s in enumerate(sil):
+    #         sTemp[ind3, :] = np.logical_and(t > s[0], t < s[1])
+    #     silentSamples = np.any(sTemp, axis=0)
+    #     y_temp = y[~silentSamples]
+    #     sumsqrd += np.sum(y_temp**2)
+    #     n += y_temp.size
+    # rms = np.sqrt(sumsqrd/n)
+    #np.save(os.path.join(rmsDir, 'overall_speech_rms.npy'), rms)
     return rms
         #sentenceFFT.append(np.abs(Zxx[:, ~np.any(sTemp, axis=0)]))
 
@@ -268,4 +302,4 @@ if __name__ == "__main__":
     silences = detect_silences(rmsFiles, 44100)
     s_rms = calc_speech_rms(wavFiles, silences, rmsDir)
     b = calc_spectrum(wavFiles, silences)
-    y = gen_noise(args['OutDir'], b, 44100, s_rms)
+    y = gen_noise(args['OutDir'], b, 44100)
