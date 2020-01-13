@@ -20,6 +20,7 @@ from pysndfile import PySndfile, sndio
 import matplotlib.pyplot as plt
 from ITU_P56 import asl_P56
 from pathlib import Path
+from snrops import rms_no_silences
 
 from multiprocessing.dummy import Pool as ThreadPool
 import multiprocessing
@@ -215,7 +216,8 @@ def gen_noise(OutDir, b, fs):
     y = noise_norm_wav.read_frames(fs*60)
     y = y/(np.abs(y).max() * 0.95)
     # rms = np.sqrt(np.mean(y**2))
-    rms, _, _ = asl_P56(y, fs, 16)
+    # rms, _, _ = asl_P56(y, fs, 16)
+    rms = rms_no_silences(y, fs, -30.)
     print(f"Noise level: {rms}")
 
     peak = np.abs(y).max()
@@ -235,7 +237,9 @@ def calc_speech_rms(files, silences, rmsDir, fs=44100, plot=False):
     def level_calc(args):
         ind, wavfile = args
         x, fs, _ = sndio.read(wavfile)
-        level = asl_P56(x, fs, 16.)[0]
+        # level = asl_P56(x, fs, 16.)[0]
+        level = rms_no_silences(x, fs, -30.)
+
         print(f"Calculated level of {Path(wavfile).name} ({ind+1}/{n_files}): {level}")
         return level
 

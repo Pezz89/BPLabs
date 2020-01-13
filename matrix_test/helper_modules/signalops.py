@@ -147,10 +147,9 @@ def gen_trigger(x, freq, length, fs):
 
 def calc_rms(y, window, plot=False):
     y_2 = y**2
-    rms = np.zeros(y_2.size + round(window/2.))
+    y_2 = np.pad(y_2, (round(window/2.)-1, round(window/2.)), 'constant', constant_values=(0, 0))
     y_i = rolling_window_lastaxis(y_2, window)
-    for ind, frame in enumerate(y_i):
-        rms[ind+round(window/2.)] = np.sqrt(np.mean(frame))
+    rms = np.sqrt(np.mean(y_i, axis=1))
     rms[np.isnan(rms)] = 0
     if plot:
         plt.plot(y)

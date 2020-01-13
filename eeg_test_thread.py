@@ -12,6 +12,7 @@ from shutil import copy2
 import re
 import sounddevice as sd
 from ITU_P56 import asl_P56
+from snrops import rms_no_silences
 
 from hearing_loss_sim import apply_hearing_loss_sim
 from test_base import BaseThread, run_test_thread
@@ -250,15 +251,17 @@ class EEGTestThread(BaseThread):
 
             speech = audio[:, :2]
             triggers = audio[:, 2]
-            speech_rms, _, _ = asl_P56(speech, fs, 16.)
+            #speech_rms, _, _ = asl_P56(speech, fs, 16.)
+            rms_no_silences(speech, fs, -30.)
+
             wf = []
             wm = []
             for ind2, s in enumerate(snr):
                 start = randint(0, noise_file.frames()-speech.shape[0])
                 noise_file.seek(start)
                 noise = noise_file.read_frames(speech.shape[0])
-                #noise_rms = np.sqrt(np.mean(noise**2))
-                noise_rms = asl_P56(noise, fs, 16)
+                noise_rms = np.sqrt(np.mean(noise**2))
+                # noise_rms = asl_P56(noise, fs, 16)
                 snr_fs = 10**(-s/20)
                 if snr_fs == np.inf:
                     snr_fs = 0.

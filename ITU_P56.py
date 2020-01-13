@@ -31,6 +31,7 @@ def asl_P56(x, fs, nbits):
     H = 0.2  # hangover time in seconds
     M = 15.9  # margin in dB of the difference between threshold and ASL
     thres_no = nbits-1  # number of thresholds, for 16 bit, it's 15
+    c0 = None
 
     I = np.ceil(fs*H)  # hangover in samples
     g = np.exp(-1/(fs*T))  # smoothing factor in envelop detection

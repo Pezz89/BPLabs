@@ -19,6 +19,8 @@ from matrix_test.helper_modules.filesystem import globDir
 from test_base import BaseThread
 import sounddevice as sd
 import pdb
+from ITU_P56 import asl_P56
+from snrops import rms_no_silences
 
 from config import socketio
 from hearing_loss_sim import apply_hearing_loss_sim
@@ -400,7 +402,8 @@ class MatTestThread(BaseThread):
                     # Read in audio file and calculate it's RMS
                     x, self.fs, _ = sndio.read(fp)
                     logger.info(f"Calculating level for {Path(fp).name}")
-                    x_rms, _, _ = asl_P56(x, self.fs, 16.)
+                    # x_rms, _, _ = asl_P56(x, self.fs, 16.)
+                    x_rms = rms_no_silences(x, self.fs, -30.)
                     self.lists[-1].append(x)
                     self.listsRMS[-1].append(x_rms)
                     self.listsString[-1].append(words)
@@ -537,8 +540,10 @@ class AdaptiveTrack():
         end = start + noiseLen
         self.noise.seek(start)
         x_noise = self.noise.read_frames(end-start)
+        # x_rms = np.sqrt(np.mean(x**2))
         # Scale noise to match the RMS of the speech
-        x_noise *= x_rms/self.noise_rms
+        noise_rms = np.sqrt(np.mean(x_noise**2))
+        x_noise *= x_rms/noise_rms
         y = x_noise
         # Set speech to start 500ms after the noise, scaled to the desired SNR
         sigStart = random.randint(round(self.fs/2.), round(2*self.fs))
